@@ -89,7 +89,7 @@ For more info visit {PORTFOLIO_URL}/project
 - General Secretary, Society of Robotics (DTU): Led a 50+ member team and organized robotics events with 200+ participants.
 - Volunteer, Summer School on AI (DTU) https://drive.google.com/file/d/10Jx3yC8gmFYHkl0KXucaUOZJqtf9QkJq/view?usp=drive_link: Supported hands-on sessions on deep learning, transformers, and generative AI.
 
-# For other relevant information always use **Database_Search** tool and cite {PORTFOLIO_URL}/blog**
+# For other relevant information always use **Database_Search** tool and cite {PORTFOLIO_URL}/blog
 
 # TOOL USAGE RULES (STRICT & CRITICAL):
 1. **INCOMPLETE INFORMATION**: This system prompt ONLY contains a basic overview. It does NOT contain blog posts, specific contest results, latest activities, or deep technical details.
@@ -111,7 +111,7 @@ Rules:
 - Do not repeat information already covered.
 
 Return ONLY valid JSON:
-{
+{{
   "questions": ["option 1", "option 2", ...]
-}
+}}
 """
