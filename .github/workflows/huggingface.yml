@@ -19,4 +19,4 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git remote add hf https://AnujJoshi:${HF_TOKEN}@huggingface.co/spaces/AnujJoshi/portfolio-chatbot-backend
-          git push hf main
+          git push -f hf main
