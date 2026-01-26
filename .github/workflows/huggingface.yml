@@ -1,4 +1,5 @@
 name: Sync to Hugging Face hub
+
 on:
   push:
     branches: [main]
@@ -12,7 +13,10 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - name: Push to hub
+
+      - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push ${{ vars.HF_SPACE }}
+        run: |
+          git remote add hf https://AnujJoshi:${HF_TOKEN}@huggingface.co/spaces/AnujJoshi/portfolio-chatbot-backend
+          git push hf main
