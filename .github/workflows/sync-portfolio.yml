@@ -55,10 +55,15 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
           
+          # LLM and Embedding model
+          DEFAULT_MODEL: ${{ vars.DEFAULT_MODEL }}
+          DEFAULT_EMBEDDING_MODEL: ${{ vars.DEFAULT_EMBEDDING_MODEL }}
+ 
           # Optional settings
-          OWNER: ${{ secrets.OWNER || 'Anuj Joshi' }}
-          VECTOR_STORE_COLLECTION_NAME: ${{ secrets.VECTOR_STORE_COLLECTION_NAME || 'portfolio' }}
+          OWNER: ${{ vars.OWNER || 'Anuj Joshi' }}
+          VECTOR_STORE_COLLECTION_NAME: ${{ vars.VECTOR_STORE_COLLECTION_NAME || 'portfolio' }}
           
           # Python path
           PYTHONPATH: ${{ github.workspace }}/src
