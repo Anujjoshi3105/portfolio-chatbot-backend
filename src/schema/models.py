@@ -123,6 +123,7 @@ class OllamaEmbeddingModelName(StrEnum):
 
     NOMIC_EMBED_TEXT = "nomic-embed-text"
     ALL_MINILM = "all-minilm"
+    EMBEDDING_GEMMA = "embeddinggemma:300m"
 
 
 class OpenRouterModelName(StrEnum):
