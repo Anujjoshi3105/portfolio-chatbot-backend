@@ -1,0 +1,35 @@
+services:
+  portfolio_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    environment:
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - OLLAMA_MODEL=qwen3:0.6b
+      - OLLAMA_EMBEDDING_MODEL=embeddinggemma:300m
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7860/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    develop:
+      watch:
+        - path: src/agents/
+          action: sync+restart
+          target: /app/agents/
+        - path: src/schema/
+          action: sync+restart
+          target: /app/schema/
+        - path: src/service/
+          action: sync+restart
+          target: /app/service/
+        - path: src/core/
+          action: sync+restart
+          target: /app/core/
+        - path: src/memory/
+          action: sync+restart
+          target: /app/memory/

@@ -1,0 +1,70 @@
+name: Sync Notion Portfolio to PGVector Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'ISO 8601 date to sync from (e.g., 2024-01-01T00:00:00.000Z). Leave empty to use last sync date.'
+        required: false
+        type: string
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: "0 2 * * *"
+
+jobs:
+  sync-notion-portfolio-to-pgvector-store:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Sync Notion portfolio data to PGVector store
+        env:
+          # Notion API credentials
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_EDUCATION_ID: ${{ secrets.NOTION_EDUCATION_ID }}
+          NOTION_EXPERIENCE_ID: ${{ secrets.NOTION_EXPERIENCE_ID }}
+          NOTION_PROJECT_ID: ${{ secrets.NOTION_PROJECT_ID }}
+          NOTION_TESTIMONIAL_ID: ${{ secrets.NOTION_TESTIMONIAL_ID }}
+          NOTION_BLOG_ID: ${{ secrets.NOTION_BLOG_ID }}
+          
+          # Database configuration
+          DATABASE_TYPE: postgres
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          
+          # LLM API keys (at least one required)
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          
+          # Optional settings
+          OWNER: ${{ secrets.OWNER || 'Anuj Joshi' }}
+          VECTOR_STORE_COLLECTION_NAME: ${{ secrets.VECTOR_STORE_COLLECTION_NAME || 'portfolio' }}
+          
+          # Python path
+          PYTHONPATH: ${{ github.workspace }}/src
+        run: |
+          if [ -n "${{ inputs.since }}" ]; then
+            uv run python -m scripts.load_portfolio --since "${{ inputs.since }}"
+          else
+            uv run python -m scripts.load_portfolio
+          fi
