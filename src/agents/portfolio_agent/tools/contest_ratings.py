@@ -7,12 +7,6 @@ def get_contest_ratings(username: str = "anujjoshi3105") -> str:
     """
     Use this tool to get the latest contest ratings and statistics for Anuj Joshi from various competitive programming platforms.    
     This tool fetches real-time data from Codeforces, CodeChef, LeetCode, and GeeksforGeeks.
-    
-    Args:
-        username: The username to fetch ratings for (default: anujjoshi3105)
-    
-    Returns:
-        A formatted string with contest ratings and statistics from all platforms.
     """
     try:
         if settings.CONTEST_API_URL is None:
