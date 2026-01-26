@@ -14,11 +14,11 @@ def format_contexts(documents: List[Document]) -> str:
     formatted_docs = []
 
     for i, doc in enumerate(documents):
-        source = doc.metadata.get("source_db", "Unknown")
+        metadata = doc.metadata
         content = doc.page_content.strip()
 
         formatted_docs.append(
-            f"--- Document {i + 1} (Source: {source}) ---\n{content}"
+            f"--- Document {i + 1} ({metadata}) ---\n{content}"
         )
 
     return "\n\n".join(formatted_docs)
@@ -27,9 +27,7 @@ def format_contexts(documents: List[Document]) -> str:
 # DATABASE SEARCH TOOL
 def database_search_func(query: str) -> str:
     """
-    Search Anuj Joshi's portfolio database for any information.
-    Use this tool whenever the user asks about education, experience, projects, blog posts, testimonials, or any other information NOT available 
-    in your system prompt.
+    Use this tool to search for relevant information about Anuj Joshi's education, experience, projects, blog posts, testimonials, skills, etc.
     """
 
     documents = hybrid_search(query, k=6)
