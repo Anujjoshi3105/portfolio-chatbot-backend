@@ -57,7 +57,14 @@ class PortfolioAgent(LazyLoadingAgent):
 
         # Portfolio Model Wrapper (WITH tools)
         def wrap_portfolio_model(model):
-            model = model.bind_tools(self._tools)
+            # Only bind tools if we have valid tools
+            if self._tools:
+                try:
+                    model = model.bind_tools(self._tools)
+                except Exception as e:
+                    logger.warning(f"Failed to bind tools to model: {e}. Continuing without tools.")
+            else:
+                logger.warning("No tools available, model will run without tool binding")
 
             def prepare_messages(state: AgentState):
                 summary = state.get("summary", "")
@@ -70,10 +77,39 @@ class PortfolioAgent(LazyLoadingAgent):
             return RunnableLambda(prepare_messages) | model
 
         async def call_portfolio_model(state: AgentState, config: RunnableConfig):
-            model = get_model(settings.DEFAULT_MODEL)
-            runnable = wrap_portfolio_model(model)
-            response = await runnable.ainvoke(state, config)
-            return {"messages": [response]}
+            try:
+                model = get_model(settings.DEFAULT_MODEL)
+                runnable = wrap_portfolio_model(model)
+                response = await runnable.ainvoke(state, config)
+                return {"messages": [response]}
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Error in call_portfolio_model: {e}", exc_info=True)
+                
+                # If it's a tool call error, try again without tools as fallback
+                if "Failed to call a function" in error_msg or "tool" in error_msg.lower():
+                    logger.warning("Tool call error detected, attempting fallback without tools")
+                    try:
+                        model = get_model(settings.DEFAULT_MODEL)
+                        # Create a simple chain without tools
+                        def prepare_messages_fallback(state: AgentState):
+                            summary = state.get("summary", "")
+                            system_content = SYSTEM_PROMPT
+                            if summary:
+                                system_content += f"\n\n### Previous Conversation Summary:\n{summary}"
+                            return [SystemMessage(content=system_content)] + state["messages"]
+                        
+                        runnable = RunnableLambda(prepare_messages_fallback) | model
+                        response = await runnable.ainvoke(state, config)
+                        return {"messages": [response]}
+                    except Exception as fallback_error:
+                        logger.error(f"Fallback also failed: {fallback_error}", exc_info=True)
+                
+                # If all else fails, return an error message
+                error_response = AIMessage(
+                    content="I encountered an error while processing your request. Please try rephrasing your question or ask about something else."
+                )
+                return {"messages": [error_response]}
 
         async def generate_followup(state: AgentState, config: RunnableConfig):
             model = get_model(settings.DEFAULT_MODEL)
