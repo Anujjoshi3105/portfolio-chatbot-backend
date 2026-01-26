@@ -13,7 +13,7 @@ done
 
 echo "Pulling models..."
 # Pull models based on environment variables or defaults
-OLLAMA_MODEL=${OLLAMA_MODEL:-"qwen3:0.6b"}
+OLLAMA_MODEL=${OLLAMA_MODEL:-"qwen3:0.6b-q4_K_M"}
 OLLAMA_EMBEDDING_MODEL=${OLLAMA_EMBEDDING_MODEL:-"embeddinggemma:300m"}
 
 echo "Pulling model: $OLLAMA_MODEL"
