@@ -1,17 +1,15 @@
-from typing import Any
-
-from langchain_core.messages import ChatMessage
-from langgraph.types import StreamWriter
-from pydantic import BaseModel, Field
+from langchain_core.tools import BaseTool
+from typing import Iterable, Set, List
 
 
-class CustomData(BaseModel):
-    "Custom data being sent by an agent"
+def filter_mcp_tools(tools: Iterable[BaseTool], allowed: Set[str]) -> List[BaseTool]:
+    """Keep only allowed MCP tools and remove namespace (cpstat.)."""
+    filtered = []
 
-    data: dict[str, Any] = Field(description="The custom data")
+    for t in tools:
+        short_name = t.name.rsplit(".", 1)[-1]
+        if short_name in allowed:
+            t.name = short_name
+            filtered.append(t)
 
-    def to_langchain(self) -> ChatMessage:
-        return ChatMessage(content=[self.data], role="custom")
-
-    def dispatch(self, writer: StreamWriter) -> None:
-        writer(self.to_langchain())
+    return filtered

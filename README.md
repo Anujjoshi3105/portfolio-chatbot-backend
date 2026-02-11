@@ -9,8 +9,8 @@ pinned: false
 
 # 🧰 AI Agent Service Toolkit
 
-[![build status](https://github.com/JoshuaC215/agent-service-toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/JoshuaC215/agent-service-toolkit/actions/workflows/test.yml) [![codecov](https://codecov.io/github/JoshuaC215/agent-service-toolkit/graph/badge.svg?token=5MTJSYWD05)](https://codecov.io/github/JoshuaC215/agent-service-toolkit) [![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FJoshuaC215%2Fagent-service-toolkit%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)](https://github.com/JoshuaC215/agent-service-toolkit/blob/main/pyproject.toml)
-[![GitHub License](https://img.shields.io/github/license/JoshuaC215/agent-service-toolkit)](https://github.com/JoshuaC215/agent-service-toolkit/blob/main/LICENSE) [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_red.svg)](https://agent-service-toolkit.streamlit.app/)
+[![build status](https://github.com/JoshuaC215/chatbot/actions/workflows/test.yml/badge.svg)](https://github.com/JoshuaC215/chatbot/actions/workflows/test.yml) [![codecov](https://codecov.io/github/JoshuaC215/chatbot/graph/badge.svg?token=5MTJSYWD05)](https://codecov.io/github/JoshuaC215/chatbot) [![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FJoshuaC215%2Fchatbot%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)](https://github.com/JoshuaC215/chatbot/blob/main/pyproject.toml)
+[![GitHub License](https://img.shields.io/github/license/JoshuaC215/chatbot)](https://github.com/JoshuaC215/chatbot/blob/main/LICENSE) [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_red.svg)](https://chatbot.streamlit.app/)
 
 A full toolkit for running an AI agent service built with LangGraph, FastAPI and Streamlit.
 
@@ -22,9 +22,9 @@ This project offers a template for you to easily build and run your own agents u
 
 ## Overview
 
-### [Try the app!](https://agent-service-toolkit.streamlit.app/)
+### [Try the app!](https://chatbot.streamlit.app/)
 
-<a href="https://agent-service-toolkit.streamlit.app/"><img src="media/app_screenshot.png" width="600"></a>
+<a href="https://chatbot.streamlit.app/"><img src="media/app_screenshot.png" width="600"></a>
 
 ### Quickstart
 
@@ -34,7 +34,7 @@ Run directly in python
 # At least one LLM API key is required
 echo 'OPENAI_API_KEY=your_openai_api_key' >> .env
 
-# uv is the recommended way to install agent-service-toolkit, but "pip install ." also works
+# uv is the recommended way to install chatbot, but "pip install ." also works
 # For uv installation options, see: https://docs.astral.sh/uv/getting-started/installation/
 curl -LsSf https://astral.sh/uv/0.7.19/install.sh | sh
 
@@ -90,8 +90,8 @@ The repository is structured as follows:
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/JoshuaC215/agent-service-toolkit.git
-   cd agent-service-toolkit
+   git clone https://github.com/JoshuaC215/chatbot.git
+   cd chatbot
    ```
 
 2. Set up environment variables:
@@ -206,12 +206,12 @@ You can also run the agent service and the Streamlit app locally without Docker,
 
 4. Open your browser and navigate to the URL provided by Streamlit (usually `http://localhost:8501`).
 
-## Projects built with or inspired by agent-service-toolkit
+## Projects built with or inspired by chatbot
 
 The following are a few of the public projects that drew code or inspiration from this repo.
 
-- **[PolyRAG](https://github.com/QuentinFuxa/PolyRAG)** - Extends agent-service-toolkit with RAG capabilities over both PostgreSQL databases and PDF documents.
-- **[alexrisch/agent-web-kit](https://github.com/alexrisch/agent-web-kit)** - A Next.JS frontend for agent-service-toolkit
+- **[PolyRAG](https://github.com/QuentinFuxa/PolyRAG)** - Extends chatbot with RAG capabilities over both PostgreSQL databases and PDF documents.
+- **[alexrisch/agent-web-kit](https://github.com/alexrisch/agent-web-kit)** - A Next.JS frontend for chatbot
 - **[raushan-in/dapa](https://github.com/raushan-in/dapa)** - Digital Arrest Protection App (DAPA) enables users to report financial scams and frauds efficiently via a user-friendly platform.
 
 **Please create a pull request editing the README or open a discussion with any new ones to be added!** Would love to include more projects.

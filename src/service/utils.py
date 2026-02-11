@@ -1,3 +1,6 @@
+import json
+
+import toons
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -10,6 +13,19 @@ from langchain_core.messages import (
 
 from schema import ChatMessage
 
+
+def convert_tool_response_to_toon(content: str) -> str:
+    """
+    Convert JSON tool response to TOON format to reduce tokens (30–60% fewer than JSON).
+    https://pypi.org/project/toons/
+    """
+    if not content or not isinstance(content, str):
+        return content
+    try:
+        data = json.loads(content)
+    except (json.JSONDecodeError, TypeError):
+        return content
+    return toons.dumps(data)
 
 def convert_message_content_to_string(content: str | list[str | dict]) -> str:
     if isinstance(content, str):

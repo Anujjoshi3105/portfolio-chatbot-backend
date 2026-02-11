@@ -17,6 +17,10 @@ class AgentInfo(BaseModel):
         description="Description of the agent.",
         examples=["A research assistant for generating research papers."],
     )
+    prompts: list[str] = Field(
+        description="List of suggested prompts for the agent.",
+        default=[],
+    )
 
 
 class ServiceMetadata(BaseModel):
@@ -165,6 +169,10 @@ class FeedbackResponse(BaseModel):
 class ChatHistoryInput(BaseModel):
     """Input for retrieving chat history."""
 
+    user_id: str = Field(
+        description="User ID to scope history to the current user.",
+        examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
+    )
     thread_id: str = Field(
         description="Thread ID to persist and continue a multi-turn conversation.",
         examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
@@ -173,3 +181,36 @@ class ChatHistoryInput(BaseModel):
 
 class ChatHistory(BaseModel):
     messages: list[ChatMessage]
+
+
+class ThreadSummary(BaseModel):
+    """Summary of a conversation thread for listing."""
+
+    thread_id: str = Field(description="Thread ID (logical id, without user prefix).")
+    updated_at: str | None = Field(
+        default=None,
+        description="ISO 8601 timestamp of last update.",
+    )
+    preview: str | None = Field(
+        default=None,
+        description="Preview of the first or last message.",
+    )
+
+
+class ThreadListInput(BaseModel):
+    """Input for listing threads for a user."""
+
+    user_id: str = Field(
+        description="User ID to list threads for.",
+        examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
+    )
+    limit: int = Field(default=20, ge=1, le=100, description="Max number of threads to return.")
+    offset: int = Field(default=0, ge=0, description="Number of threads to skip.")
+    search: str | None = Field(default=None, description="Filter threads by thread_id or preview (case-insensitive).")
+
+
+class ThreadList(BaseModel):
+    """List of threads for a user."""
+
+    threads: list[ThreadSummary] = Field(default_factory=list)
+    total: int | None = Field(default=None, description="Total matching threads before pagination.")

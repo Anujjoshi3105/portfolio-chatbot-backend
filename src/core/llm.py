@@ -113,14 +113,7 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
     if model_name in VertexAIModelName:
         return ChatVertexAI(model=api_model_name, temperature=0.5, streaming=True)
     if model_name in GroqModelName:
-        # Guard and safeguard models should use temperature=0.0 for deterministic outputs
-        guard_models = {
-            GroqModelName.LLAMA_GUARD_4_12B,
-            GroqModelName.LLAMA_PROMPT_GUARD_2_22M,
-            GroqModelName.LLAMA_PROMPT_GUARD_2_86M,
-            GroqModelName.OPENAI_GPT_OSS_SAFEGUARD_20B,
-        }
-        if model_name in guard_models:
+        if model_name == GroqModelName.LLAMA_GUARD_4_12B:
             return ChatGroq(model=api_model_name, temperature=0.0)  # type: ignore[call-arg]
         return ChatGroq(model=api_model_name, temperature=0.5)  # type: ignore[call-arg]
     if model_name in AWSModelName:

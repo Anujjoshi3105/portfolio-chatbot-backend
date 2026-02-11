@@ -3,19 +3,10 @@ from dataclasses import dataclass
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.pregel import Pregel
 
-from agents.bg_task_agent.bg_task_agent import bg_task_agent
-from agents.chatbot import chatbot
-from agents.command_agent import command_agent
-from agents.github_mcp_agent.github_mcp_agent import github_mcp_agent
-from agents.interrupt_agent import interrupt_agent
-from agents.knowledge_base_agent import kb_agent
-from agents.langgraph_supervisor_agent import langgraph_supervisor_agent
-from agents.langgraph_supervisor_hierarchy_agent import langgraph_supervisor_hierarchy_agent
-from agents.portfolio_agent.portfolio_agent import portfolio_agent
-
+from agents.portfolio_agent import portfolio_agent
+from agents.github_mcp_agent import github_mcp_agent
+from agents.cpstat_agent import cpstat_agent
 from agents.lazy_agent import LazyLoadingAgent
-from agents.rag_assistant import rag_assistant
-from agents.research_assistant import research_assistant
 from schema import AgentInfo
 
 DEFAULT_AGENT = "portfolio-agent"
@@ -31,41 +22,40 @@ AgentGraphLike = CompiledStateGraph | Pregel | LazyLoadingAgent  # What can be s
 class Agent:
     description: str
     graph_like: AgentGraphLike
+    prompts: list[str]
 
 
 agents: dict[str, Agent] = {
-    "chatbot": Agent(description="A simple chatbot.", graph_like=chatbot),
-    "research-assistant": Agent(
-        description="A research assistant with web search and calculator.",
-        graph_like=research_assistant,
-    ),
-    "rag-assistant": Agent(
-        description="A RAG assistant with access to information in a database.",
-        graph_like=rag_assistant,
-    ),
     "portfolio-agent": Agent(
-        description="A portfolio assistant with access to information in a database.",
+        description="A specialized portfolio assistant that can answer questions about Anuj Joshi's background, skills, projects, and experience using a curated knowledge base.",
         graph_like=portfolio_agent,
-    ),
-    "command-agent": Agent(description="A command agent.", graph_like=command_agent),
-    "bg-task-agent": Agent(description="A background task agent.", graph_like=bg_task_agent),
-    "langgraph-supervisor-agent": Agent(
-        description="A langgraph supervisor agent", graph_like=langgraph_supervisor_agent
-    ),
-    "langgraph-supervisor-hierarchy-agent": Agent(
-        description="A langgraph supervisor agent with a nested hierarchy of agents",
-        graph_like=langgraph_supervisor_hierarchy_agent,
-    ),
-    "interrupt-agent": Agent(
-        description="An agent the uses interrupts.", graph_like=interrupt_agent
-    ),
-    "knowledge-base-agent": Agent(
-        description="A retrieval-augmented generation agent using Amazon Bedrock Knowledge Base",
-        graph_like=kb_agent,
+        prompts=[
+            "Tell me about Anuj's background",
+            "What are Anuj's key technical skills?",
+            "Show me some of Anuj's featured projects",
+            "What is Anuj's work experience?",
+            "How can I contact Anuj?",
+        ],
     ),
     "github-mcp-agent": Agent(
-        description="A GitHub agent with MCP tools for repository management and development workflows.",
+        description="An agent equipped with GitHub MCP tools to explore repositories, view code, and track development activity.",
         graph_like=github_mcp_agent,
+        prompts=[
+            "List anujjoshi3105's top repositories",
+            "Show recent activity on anujjoshi3105's GitHub",
+            "Tell me about the 'portfolio-bot' repository",
+            "Show me anujjoshi3105's contributions in the last month",
+        ],
+    ),
+    "cpstat-agent": Agent(
+        description="An agent specializing in Competitive Programming, capable of fetching real-time contest ratings and stats from various platforms.",
+        graph_like=cpstat_agent,
+        prompts=[
+            "Show Anuj's LeetCode rating and stats",
+            "What is Anuj's Codeforces rank?",
+            "Get recent contest performance for anujjoshi3105",
+            "Show CP stats across all platforms",
+        ],
     ),
 }
 
@@ -93,5 +83,6 @@ def get_agent(agent_id: str) -> AgentGraph:
 
 def get_all_agent_info() -> list[AgentInfo]:
     return [
-        AgentInfo(key=agent_id, description=agent.description) for agent_id, agent in agents.items()
+        AgentInfo(key=agent_id, description=agent.description, prompts=agent.prompts)
+        for agent_id, agent in agents.items()
     ]

@@ -8,6 +8,9 @@ from schema.schema import (
     FeedbackResponse,
     ServiceMetadata,
     StreamInput,
+    ThreadList,
+    ThreadListInput,
+    ThreadSummary,
     UserInput,
 )
 
@@ -22,4 +25,7 @@ __all__ = [
     "FeedbackResponse",
     "ChatHistoryInput",
     "ChatHistory",
+    "ThreadSummary",
+    "ThreadListInput",
+    "ThreadList",
 ]

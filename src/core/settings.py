@@ -85,7 +85,6 @@ class Settings(BaseSettings):
     AUTH_SECRET: SecretStr | None = None
     CORS_ORIGINS: Annotated[Any, BeforeValidator(lambda x: x.split(",") if isinstance(x, str) else x)] = [
         "http://localhost:3000",
-        "http://localhost:8081",
         "http://localhost:5173",
     ]
 
@@ -97,6 +96,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: SecretStr | None = None
     USE_AWS_BEDROCK: bool = False
     OLLAMA_MODEL: str | None = None
+    OLLAMA_EMBEDDING_MODEL: str | None = None
     OLLAMA_BASE_URL: str | None = None
     USE_FAKE_MODEL: bool = False
     OPENROUTER_API_KEY: str | None = None
@@ -108,7 +108,6 @@ class Settings(BaseSettings):
     # Embedding Settings
     DEFAULT_EMBEDDING_MODEL: AllEmbeddingModelEnum | None = None  # type: ignore[assignment]
     AVAILABLE_EMBEDDING_MODELS: set[AllEmbeddingModelEnum] = set()  # type: ignore[assignment]
-    OLLAMA_EMBEDDING_MODEL: str | None = None
 
     # Set openai compatible api, mainly used for proof of concept
     COMPATIBLE_MODEL: str | None = None
@@ -135,6 +134,9 @@ class Settings(BaseSettings):
     LANGFUSE_PUBLIC_KEY: SecretStr | None = None
     LANGFUSE_SECRET_KEY: SecretStr | None = None
 
+    # Safety Guard Configuration
+    ENABLE_SAFETY_GUARD: bool = True
+
     # Database Configuration
     DATABASE_TYPE: DatabaseType = (
         DatabaseType.SQLITE
@@ -147,7 +149,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str | None = None
     POSTGRES_PORT: int | None = None
     POSTGRES_DB: str | None = None
-    POSTGRES_APPLICATION_NAME: str = "agent-service-toolkit"
+    POSTGRES_APPLICATION_NAME: str = "chatbot"
     POSTGRES_MIN_CONNECTIONS_PER_POOL: int = 1
     POSTGRES_MAX_CONNECTIONS_PER_POOL: int = 1
     VECTOR_STORE_COLLECTION_NAME: str = "vector_store"
