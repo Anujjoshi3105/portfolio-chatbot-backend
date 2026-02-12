@@ -34,28 +34,26 @@ jobs:
 
       - name: Sync Notion portfolio data to PGVector store
         env:
+          # LLM API keys
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
+          
           # Notion API credentials
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_BLOG_ID: ${{ secrets.NOTION_BLOG_ID }}
           NOTION_EDUCATION_ID: ${{ secrets.NOTION_EDUCATION_ID }}
           NOTION_EXPERIENCE_ID: ${{ secrets.NOTION_EXPERIENCE_ID }}
           NOTION_PROJECT_ID: ${{ secrets.NOTION_PROJECT_ID }}
           NOTION_TESTIMONIAL_ID: ${{ secrets.NOTION_TESTIMONIAL_ID }}
-          NOTION_BLOG_ID: ${{ secrets.NOTION_BLOG_ID }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           
           # Database configuration
           DATABASE_TYPE: postgres
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
-          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
-          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_HOST: ${{ vars.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ vars.POSTGRES_PORT }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           
-          # LLM API keys (at least one required)
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
           
           # LLM and Embedding model
           DEFAULT_MODEL: ${{ vars.DEFAULT_MODEL }}
