@@ -8,8 +8,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from agents.utils import filter_mcp_tools
 from agents.lazy_agent import LazyLoadingAgent
-from agents.middlewares import ConfigurableModelMiddleware
-from agents.middlewares.summarization import SummarizationMiddleware
+from agents.middlewares import ConfigurableModelMiddleware, SummarizationMiddleware
 from agents.prompts.cpstat import SYSTEM_PROMPT
 from core import get_model, settings
 
@@ -85,8 +84,9 @@ class CPStatAgent(LazyLoadingAgent):
             self._mcp_client = MultiServerMCPClient(connections)
             logger.info(f"CP Stat client initialized successfully with URL: {settings.CONTEST_API_URL}")
 
-            all_tools = await self._mcp_client.get_tools()
-            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
+#            all_tools = await self._mcp_client.get_tools()
+#            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
+            self._mcp_tools = await self._mcp_client.get_tools()
             
         except Exception as e:
             logger.error(f"Failed to initialize CP Stat agent: {e}")
@@ -104,7 +104,11 @@ class CPStatAgent(LazyLoadingAgent):
             tools=self._mcp_tools,
             middleware=[
                 ConfigurableModelMiddleware(),
-                SummarizationMiddleware(model=self._model),
+                SummarizationMiddleware(
+                    max_tokens_before_summary=1000,
+                    messages_to_keep=4,
+                    use_llm=False
+                ),
             ],
             name="cpstat-agent",
             system_prompt=SYSTEM_PROMPT,

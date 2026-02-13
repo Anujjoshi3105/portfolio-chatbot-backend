@@ -8,8 +8,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from agents.utils import filter_mcp_tools
 from agents.lazy_agent import LazyLoadingAgent
-from agents.middlewares import ConfigurableModelMiddleware
-from agents.middlewares.summarization import SummarizationMiddleware
+from agents.middlewares import ConfigurableModelMiddleware, SummarizationMiddleware
 from core import get_model, settings
 from agents.prompts.github import SYSTEM_PROMPT
 
@@ -53,8 +52,6 @@ ALLOWED_TOOLS = {
 }
 
 
-
-
 class GitHubMCPAgent(LazyLoadingAgent):
     """GitHub MCP Agent with async initialization for portfolio assistant."""
 
@@ -88,10 +85,10 @@ class GitHubMCPAgent(LazyLoadingAgent):
 
             self._mcp_client = MultiServerMCPClient(connections)
             logger.info("MCP client initialized successfully")
-
-            all_tools = await self._mcp_client.get_tools()
-            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
-
+            
+#            all_tools = await self._mcp_client.get_tools()
+#            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
+            self._mcp_tools = await self._mcp_client.get_tools()
         except Exception as e:
             logger.error(f"Failed to initialize GitHub MCP agent: {e}")
             self._mcp_tools = []
@@ -108,7 +105,11 @@ class GitHubMCPAgent(LazyLoadingAgent):
             tools=self._mcp_tools,
             middleware=[
                 ConfigurableModelMiddleware(),
-                SummarizationMiddleware(model=self._model),
+                SummarizationMiddleware(
+                    max_tokens_before_summary=1000,
+                    messages_to_keep=4,
+                    use_llm=False
+                ),
             ],
             name="github-mcp-agent",
             system_prompt=SYSTEM_PROMPT,

@@ -82,8 +82,8 @@ https://drive.google.com/file/d/150EAtBVjP1DV-b_v0JKhVYzhIVoCvAWO/view
 - Database_Search: Search portfolio info (education, experience, testimonials, skills, projects, blog). Cite {PORTFOLIO_URL}/blog
 
 # OUTPUT GUIDELINES:
-- **Content:** Include all the links, images, and other relevant content from the all the suitable available tools accurately in the final response.
-- **Information-Dense Sentences:** Every sentence must provide a new fact.
+- **Content:** Be very specific and accurate with the information you provide.
+- **Information-Dense:** Every sentence must provide a new fact.
 - **Interesting and Engaging:** Use a mix of facts and interesting details to keep the reader engaged.
 - **Style:** Professional, concise, witty and helpful.
 """

@@ -43,7 +43,7 @@ agents: dict[str, Agent] = {
         prompts=[
             "List anujjoshi3105's top repositories",
             "Show recent activity on anujjoshi3105's GitHub",
-            "Tell me about the 'portfolio-bot' repository",
+            "Tell me about his issues and pull requests",
             "Show me anujjoshi3105's contributions in the last month",
         ],
     ),

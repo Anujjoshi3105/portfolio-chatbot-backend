@@ -349,7 +349,7 @@ def _iso_ts(dt: datetime | str | None) -> str | None:
 async def list_threads(
     user_id: str,
     *,
-    limit: int = 20,
+    limit: int = 10,
     offset: int = 0,
     search: str | None = None,
 ) -> ThreadList:
