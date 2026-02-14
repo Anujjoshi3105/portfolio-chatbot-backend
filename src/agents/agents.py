@@ -4,8 +4,8 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.pregel import Pregel
 
 from agents.portfolio_agent import portfolio_agent
-from agents.github_mcp_agent import github_mcp_agent
-from agents.cpstat_agent import cpstat_agent
+from agents.open_source_agent import open_source_agent
+from agents.competitive_programming_agent import competitive_programming_agent
 from agents.lazy_agent import LazyLoadingAgent
 from schema import AgentInfo
 
@@ -37,9 +37,9 @@ agents: dict[str, Agent] = {
             "How can I contact Anuj?",
         ],
     ),
-    "github-mcp-agent": Agent(
-        description="An agent equipped with GitHub MCP tools to explore repositories, view code, and track development activity.",
-        graph_like=github_mcp_agent,
+    "open-source-agent": Agent(
+        description="An intelligent assistant that integrates with GitHub to showcase Anuj's open-source contributions. It can analyze repositories, summarize recent activity, and provide insights into code quality and development impact.",
+        graph_like=open_source_agent,
         prompts=[
             "List anujjoshi3105's top repositories",
             "Show recent activity on anujjoshi3105's GitHub",
@@ -47,9 +47,9 @@ agents: dict[str, Agent] = {
             "Show me anujjoshi3105's contributions in the last month",
         ],
     ),
-    "cpstat-agent": Agent(
-        description="An agent specializing in Competitive Programming, capable of fetching real-time contest ratings and stats from various platforms.",
-        graph_like=cpstat_agent,
+    "competitive-programming-agent": Agent(
+        description="A dedicated competitive programming analyst that tracks Anuj's performance across major platforms like LeetCode and Codeforces. It provides real-time ratings, contest history, and detailed problem-solving statistics.",
+        graph_like=competitive_programming_agent,
         prompts=[
             "Show Anuj's LeetCode rating and stats",
             "What is Anuj's Codeforces rank?",

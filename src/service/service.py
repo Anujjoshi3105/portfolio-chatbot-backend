@@ -39,6 +39,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             if hasattr(store, "setup"):  # ignore: union-attr
                 await store.setup()
 
+            # Expose checkpointer for history service (no agent dependency)
+            app.state.checkpointer = saver
+
             # Configure agents with both memory components and async loading
             agents = get_all_agent_info()
             for a in agents:

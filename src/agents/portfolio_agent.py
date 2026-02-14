@@ -4,7 +4,7 @@ from langchain.agents import create_agent
 from langgraph.graph.state import CompiledStateGraph
 
 from agents.lazy_agent import LazyLoadingAgent
-from agents.middlewares import ConfigurableModelMiddleware, SummarizationMiddleware
+from agents.middlewares import ConfigurableModelMiddleware
 from agents.prompts.portfolio import SYSTEM_PROMPT
 from agents.tools.database_search import database_search
 from core import get_model, settings
@@ -32,11 +32,6 @@ class PortfolioAgent(LazyLoadingAgent):
             tools=self._tools,
             middleware=[
                 ConfigurableModelMiddleware(),
-                SummarizationMiddleware(
-                    max_tokens_before_summary=1000,
-                    messages_to_keep=4,
-                    use_llm=False
-                ),
             ],
             name="portfolio-agent",
             system_prompt=SYSTEM_PROMPT,

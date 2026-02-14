@@ -8,115 +8,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "chatbot"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "ddgs" },
-    { name = "duckduckgo-search" },
-    { name = "fastapi" },
-    { name = "grpcio" },
-    { name = "httpx" },
-    { name = "jiter" },
-    { name = "langchain" },
-    { name = "langchain-anthropic" },
-    { name = "langchain-aws" },
-    { name = "langchain-community" },
-    { name = "langchain-core" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-google-vertexai" },
-    { name = "langchain-groq" },
-    { name = "langchain-mcp-adapters" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
-    { name = "langchain-postgres" },
-    { name = "langfuse" },
-    { name = "langgraph" },
-    { name = "langgraph-checkpoint-mongodb" },
-    { name = "langgraph-checkpoint-postgres" },
-    { name = "langgraph-checkpoint-sqlite" },
-    { name = "langsmith" },
-    { name = "psycopg", extra = ["binary", "pool"] },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "setuptools" },
-    { name = "tiktoken" },
-    { name = "toons" },
-    { name = "uvicorn" },
-]
-
-[package.dev-dependencies]
-client = [
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-]
-dev = [
-    { name = "langgraph-cli", extra = ["inmem"] },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-env" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ddgs", specifier = ">=9.9.1" },
-    { name = "duckduckgo-search", specifier = ">=7.3.0" },
-    { name = "fastapi", specifier = "~=0.115.5" },
-    { name = "grpcio", specifier = ">=1.68.0" },
-    { name = "httpx", specifier = "~=0.28.0" },
-    { name = "jiter", specifier = "~=0.8.2" },
-    { name = "langchain", specifier = "~=1.0.5" },
-    { name = "langchain-anthropic", specifier = "~=1.0.0" },
-    { name = "langchain-aws", specifier = "~=1.0.0" },
-    { name = "langchain-community", specifier = "~=0.4.1" },
-    { name = "langchain-core", specifier = "~=1.0.0" },
-    { name = "langchain-google-genai", specifier = "~=3.0.0" },
-    { name = "langchain-google-vertexai", specifier = ">=3.0.3" },
-    { name = "langchain-groq", specifier = "~=1.0.1" },
-    { name = "langchain-mcp-adapters", specifier = ">=0.1.10" },
-    { name = "langchain-ollama", specifier = "~=1.0.0" },
-    { name = "langchain-openai", specifier = "~=1.0.2" },
-    { name = "langchain-postgres", specifier = "~=0.0.9" },
-    { name = "langfuse", specifier = ">=2.65.0" },
-    { name = "langgraph", specifier = "~=1.0.0" },
-    { name = "langgraph-checkpoint-mongodb", specifier = "~=0.1.3" },
-    { name = "langgraph-checkpoint-postgres", specifier = "~=2.0.13" },
-    { name = "langgraph-checkpoint-sqlite", specifier = "~=2.0.1" },
-    { name = "langsmith", specifier = "~=0.4.0" },
-    { name = "psycopg", extras = ["binary", "pool"], specifier = "~=3.2.4" },
-    { name = "pydantic", specifier = "~=2.10.1" },
-    { name = "pydantic-settings", specifier = "~=2.12.0" },
-    { name = "python-dotenv", specifier = "~=1.0.1" },
-    { name = "setuptools", specifier = "~=75.6.0" },
-    { name = "tiktoken", specifier = ">=0.8.0" },
-    { name = "toons", specifier = ">=0.5.2" },
-    { name = "uvicorn", specifier = "~=0.32.1" },
-]
-
-[package.metadata.requires-dev]
-client = [
-    { name = "httpx", specifier = "~=0.28.0" },
-    { name = "pydantic", specifier = "~=2.10.1" },
-    { name = "python-dotenv", specifier = "~=1.0.1" },
-]
-dev = [
-    { name = "langgraph-cli", extras = ["inmem"] },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-env" },
-    { name = "ruff" },
-]
-
-[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -574,6 +465,117 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/26/b9924fa27db384bdcd97ab83b4f0a8058d96ad9626ead570674d5e737d90/charset_normalizer-3.4.4-cp313-cp313-win_amd64.whl", hash = "sha256:b435cba5f4f750aa6c0a0d92c541fb79f69a387c91e61f1795227e4ed9cece14", size = 107092, upload-time = "2025-10-14T04:41:31.188Z" },
     { url = "https://files.pythonhosted.org/packages/af/8f/3ed4bfa0c0c72a7ca17f0380cd9e4dd842b09f664e780c13cff1dcf2ef1b/charset_normalizer-3.4.4-cp313-cp313-win_arm64.whl", hash = "sha256:542d2cee80be6f80247095cc36c418f7bddd14f4a6de45af91dfad36d817bba2", size = 100408, upload-time = "2025-10-14T04:41:32.624Z" },
     { url = "https://files.pythonhosted.org/packages/0a/4c/925909008ed5a988ccbb72dcc897407e5d6d3bd72410d69e051fc0c14647/charset_normalizer-3.4.4-py3-none-any.whl", hash = "sha256:7a32c560861a02ff789ad905a2fe94e3f840803362c84fecf1851cb4cf3dc37f", size = 53402, upload-time = "2025-10-14T04:42:31.76Z" },
+]
+
+[[package]]
+name = "chatbot"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "ddgs" },
+    { name = "duckduckgo-search" },
+    { name = "fastapi" },
+    { name = "grpcio" },
+    { name = "httpx" },
+    { name = "jiter" },
+    { name = "langchain" },
+    { name = "langchain-anthropic" },
+    { name = "langchain-aws" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "langchain-google-genai" },
+    { name = "langchain-google-vertexai" },
+    { name = "langchain-groq" },
+    { name = "langchain-mcp-adapters" },
+    { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
+    { name = "langchain-postgres" },
+    { name = "langfuse" },
+    { name = "langgraph" },
+    { name = "langgraph-checkpoint-mongodb" },
+    { name = "langgraph-checkpoint-postgres" },
+    { name = "langgraph-checkpoint-sqlite" },
+    { name = "langsmith" },
+    { name = "psycopg", extra = ["binary", "pool"] },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "setuptools" },
+    { name = "tiktoken" },
+    { name = "toons" },
+    { name = "uvicorn" },
+]
+
+[package.dev-dependencies]
+client = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+]
+dev = [
+    { name = "langgraph-cli", extra = ["inmem"] },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-env" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ddgs", specifier = ">=9.9.1" },
+    { name = "duckduckgo-search", specifier = ">=7.3.0" },
+    { name = "fastapi", specifier = "~=0.115.5" },
+    { name = "grpcio", specifier = ">=1.68.0" },
+    { name = "httpx", specifier = "~=0.28.0" },
+    { name = "jiter", specifier = "~=0.8.2" },
+    { name = "langchain", specifier = "~=1.0.5" },
+    { name = "langchain-anthropic", specifier = "~=1.0.0" },
+    { name = "langchain-aws", specifier = "~=1.0.0" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "langchain-core", specifier = "~=1.0.0" },
+    { name = "langchain-google-genai", specifier = "~=3.0.0" },
+    { name = "langchain-google-vertexai", specifier = ">=3.0.3" },
+    { name = "langchain-groq", specifier = "~=1.0.1" },
+    { name = "langchain-mcp-adapters", specifier = ">=0.1.10" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = ">=1.0.4" },
+    { name = "langchain-ollama", specifier = "~=1.0.0" },
+    { name = "langchain-openai", specifier = "~=1.0.2" },
+    { name = "langchain-postgres", specifier = "~=0.0.9" },
+    { name = "langfuse", specifier = ">=2.65.0" },
+    { name = "langgraph", specifier = "~=1.0.0" },
+    { name = "langgraph-checkpoint-mongodb", specifier = "~=0.1.3" },
+    { name = "langgraph-checkpoint-postgres", specifier = "~=2.0.13" },
+    { name = "langgraph-checkpoint-sqlite", specifier = "~=2.0.1" },
+    { name = "langsmith", specifier = "~=0.4.0" },
+    { name = "psycopg", extras = ["binary", "pool"], specifier = "~=3.2.4" },
+    { name = "pydantic", specifier = "~=2.10.1" },
+    { name = "pydantic-settings", specifier = "~=2.12.0" },
+    { name = "python-dotenv", specifier = "~=1.0.1" },
+    { name = "setuptools", specifier = "~=75.6.0" },
+    { name = "tiktoken", specifier = ">=0.8.0" },
+    { name = "toons", specifier = ">=0.5.2" },
+    { name = "uvicorn", specifier = "~=0.32.1" },
+]
+
+[package.metadata.requires-dev]
+client = [
+    { name = "httpx", specifier = "~=0.28.0" },
+    { name = "pydantic", specifier = "~=2.10.1" },
+    { name = "python-dotenv", specifier = "~=1.0.1" },
+]
+dev = [
+    { name = "langgraph-cli", extras = ["inmem"] },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-env" },
+    { name = "ruff" },
 ]
 
 [[package]]
@@ -1739,6 +1741,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/f8/643958cf2c97b3a0d12cda7a2ee3559d9966ea88dcd9b449250b8e2f4c2b/langchain_mongodb-0.7.1.tar.gz", hash = "sha256:c06dd173ba70b103baa2a39843109e31febe8586131a67f77c920e6d17dd36da", size = 281315, upload-time = "2025-10-13T14:03:01.98Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/30/88/e0b957b2d86defbfeb8181860c2bff3379ac16e918a155aed815a18190ed/langchain_mongodb-0.7.1-py3-none-any.whl", hash = "sha256:dda81023e499025b8c911103ab756d2e9cc40f953727fbbf72165bb85e684e16", size = 60724, upload-time = "2025-10-13T14:03:00.192Z" },
+]
+
+[[package]]
+name = "langchain-nvidia-ai-endpoints"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "filetype" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/2e/0b3e6ec5df7426e3ab19c8dfedd0b4a9e97461a6a536e02f6429618664ec/langchain_nvidia_ai_endpoints-1.0.4.tar.gz", hash = "sha256:831decd67e94f104bc2fecc596ef2953ea30e7adc1c3b99bd35861e018dd1fb2", size = 46600, upload-time = "2026-02-13T17:17:56.135Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/3e/a711094b31777ac4a7993507b8a3e0a45307cbab94425b5eba012a49c0cd/langchain_nvidia_ai_endpoints-1.0.4-py3-none-any.whl", hash = "sha256:49018362fca9c951488dffcf3e1372365778946e2a3b87ff7d769589e7b3c497", size = 50173, upload-time = "2026-02-13T17:17:54.759Z" },
 ]
 
 [[package]]

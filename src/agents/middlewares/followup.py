@@ -10,6 +10,7 @@ from langchain_core.messages import (
     AIMessage,
     ChatMessage,
 )
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 
 from core import get_model, settings
@@ -23,12 +24,7 @@ logger = logging.getLogger(__name__)
 
 class FollowUpOutput(BaseModel):
     """Schema for follow-up generation response."""
-
-    questions: List[str] = Field(
-        min_length=1,
-        max_length=5,
-        description="List of 1-5 suggested follow-up questions for the user.",
-    )
+    questions: List[str] = Field(min_length=1, max_length=5, description="List of 1-5 suggested follow-up questions for the user.",)
 
     @field_validator("questions")
     @classmethod
@@ -42,48 +38,25 @@ class FollowUpOutput(BaseModel):
 class FollowUpMiddleware:
     """Generates structured follow-up suggestions after an agent response."""
 
-    async def generate(
-        self,
-        messages: List[AnyMessage],
-        config: RunnableConfig,
-    ) -> List[str]:
+    async def generate(self, messages: List[AnyMessage], config: RunnableConfig) -> List[str]:
         try:
-            model_name = config.get("configurable", {}).get(
-                "model",
-                settings.DEFAULT_MODEL,
-            )
+            model_name = config.get("configurable", {}).get("model", settings.DEFAULT_MODEL)
 
-            base_model = get_model(model_name)
+            model = get_model(model_name)
+            parser = PydanticOutputParser(pydantic_object=FollowUpOutput)
 
-            # Force structured output
-            model = base_model.with_structured_output(FollowUpOutput)
+            system_message = f"{FOLLOWUP_GENERATION_PROMPT}\n\n{parser.get_format_instructions()}"
+            messages = [SystemMessage(content=system_message), messages[-1]]
 
-            # Clean messages
-            cleaned_messages: List[AnyMessage] = [
-                SystemMessage(content=FOLLOWUP_GENERATION_PROMPT),
-                *[
-                    m
-                    for m in messages
-                    if not (isinstance(m, ChatMessage) and m.role == "custom")
-                ],
-            ]
+            response = await model.ainvoke(messages, config)
+            content = parser.parse(response.content)
 
-            # Invoke model
-            response: FollowUpOutput = await model.ainvoke(
-                cleaned_messages,
-                config,
-            )
-
-            if not response or not response.questions:
+            if not content or not content.questions:
                 raise ValueError("Empty follow-up response")
 
-            return response.questions
+            return content.questions
 
         except Exception as e:
-            logger.warning(
-                "Follow-up generation failed, using defaults: %s",
-                e,
-                exc_info=True,
-            )
+            logger.warning("Follow-up generation failed, using defaults: %s", e, exc_info=True)
 
         return DEFAULT_FOLLOWUP_PROMPTS

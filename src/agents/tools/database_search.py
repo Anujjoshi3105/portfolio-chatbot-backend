@@ -19,7 +19,7 @@ def database_search(query: str) -> str:
     This tool should be used whenever the user asks about Anuj's background, work, or specific accomplishments.
     """
 
-    retriever = load_pgvector_retriever(3)
+    retriever = load_pgvector_retriever(4)
     documents = retriever.invoke(query)
 
     if not documents:

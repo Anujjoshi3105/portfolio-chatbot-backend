@@ -22,6 +22,7 @@ from schema.models import (
     FakeModelName,
     GoogleModelName,
     GroqModelName,
+    NvidiaModelName,
     OllamaModelName,
     OpenAICompatibleName,
     OpenAIModelName,
@@ -32,6 +33,7 @@ from schema.models import (
     OpenAIEmbeddingModelName,
     GoogleEmbeddingModelName,
     OllamaEmbeddingModelName,
+    NvidiaEmbeddingModelName,
 )
 
 
@@ -100,6 +102,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str | None = None
     USE_FAKE_MODEL: bool = False
     OPENROUTER_API_KEY: str | None = None
+    NVIDIA_API_KEY: SecretStr | None = None
 
     # If DEFAULT_MODEL is None, it will be set in model_post_init
     DEFAULT_MODEL: AllModelEnum | None = None  # type: ignore[assignment]
@@ -184,6 +187,7 @@ class Settings(BaseSettings):
             Provider.FAKE: self.USE_FAKE_MODEL,
             Provider.AZURE_OPENAI: self.AZURE_OPENAI_API_KEY,
             Provider.OPENROUTER: self.OPENROUTER_API_KEY,
+            Provider.NVIDIA: self.NVIDIA_API_KEY,
         }
         active_keys = [k for k, v in api_keys.items() if v]
         if not active_keys:
@@ -215,6 +219,10 @@ class Settings(BaseSettings):
                     if self.DEFAULT_MODEL is None:
                         self.DEFAULT_MODEL = VertexAIModelName.GEMINI_20_FLASH
                     self.AVAILABLE_MODELS.update(set(VertexAIModelName))
+                case Provider.NVIDIA:
+                    if self.DEFAULT_MODEL is None:
+                        self.DEFAULT_MODEL = NvidiaModelName.LLAMA_31_NEMOTRON_70B_INSTRUCT
+                    self.AVAILABLE_MODELS.update(set(NvidiaModelName))
                 case Provider.GROQ:
                     if self.DEFAULT_MODEL is None:
                         self.DEFAULT_MODEL = GroqModelName.LLAMA_31_8B_INSTANT
@@ -280,6 +288,10 @@ class Settings(BaseSettings):
                     self.AVAILABLE_EMBEDDING_MODELS.update(set(OllamaEmbeddingModelName))
                     if not self.OLLAMA_EMBEDDING_MODEL:
                         self.OLLAMA_EMBEDDING_MODEL = OllamaEmbeddingModelName.NOMIC_EMBED_TEXT
+                case Provider.NVIDIA:
+                    if self.DEFAULT_EMBEDDING_MODEL is None:
+                        self.DEFAULT_EMBEDDING_MODEL = NvidiaEmbeddingModelName.NV_EMBEDQA_MISTRAL_7B_V2
+                    self.AVAILABLE_EMBEDDING_MODELS.update(set(NvidiaEmbeddingModelName))
 
     @computed_field  # type: ignore[prop-decorator]
     @property

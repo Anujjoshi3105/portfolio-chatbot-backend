@@ -8,6 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_vertexai import ChatVertexAI
 from langchain_groq import ChatGroq
 from langchain_ollama import ChatOllama
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 from core.settings import settings
@@ -24,6 +25,7 @@ from schema.models import (
     OpenAICompatibleName,
     OpenAIModelName,
     OpenRouterModelName,
+    NvidiaModelName,
     VertexAIModelName,
 )
 
@@ -39,6 +41,7 @@ _MODEL_TABLE = (
     | {m: m.value for m in AWSModelName}
     | {m: m.value for m in OllamaModelName}
     | {m: m.value for m in OpenRouterModelName}
+    | {m: m.value for m in NvidiaModelName}
     | {m: m.value for m in FakeModelName}
 )
 
@@ -60,6 +63,7 @@ ModelT: TypeAlias = (
     | ChatGroq
     | ChatBedrock
     | ChatOllama
+    | ChatNVIDIA
     | FakeToolModel
 )
 
@@ -112,9 +116,13 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
         return ChatGoogleGenerativeAI(model=api_model_name, temperature=0.5, streaming=True)
     if model_name in VertexAIModelName:
         return ChatVertexAI(model=api_model_name, temperature=0.5, streaming=True)
+    if model_name in NvidiaModelName:
+        return ChatNVIDIA(
+            model=api_model_name,
+            temperature=0.5,
+            api_key=settings.NVIDIA_API_KEY,
+        )
     if model_name in GroqModelName:
-        if model_name == GroqModelName.LLAMA_GUARD_4_12B:
-            return ChatGroq(model=api_model_name, temperature=0.0)  # type: ignore[call-arg]
         return ChatGroq(model=api_model_name, temperature=0.5)  # type: ignore[call-arg]
     if model_name in AWSModelName:
         return ChatBedrock(model_id=api_model_name, temperature=0.5)

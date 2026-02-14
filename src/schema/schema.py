@@ -112,6 +112,10 @@ class ChatMessage(BaseModel):
         default=None,
         examples=["call_Jja7J89XsjrOLA5r!MEOW!SL"],
     )
+    name: str | None = Field(
+        description="Tool name for tool messages (type='tool'). Enables UI to show which tool produced the result.",
+        default=None,
+    )
     run_id: str | None = Field(
         description="Run ID of the message.",
         default=None,
@@ -166,6 +170,21 @@ class FeedbackResponse(BaseModel):
     status: Literal["success"] = "success"
 
 
+class ChatMessagePreview(BaseModel):
+    """Minimal message for preview/list views (type, content snippet, id)."""
+
+    type: Literal["human", "ai", "tool", "custom"] = Field(
+        description="Role of the message.",
+    )
+    content: str = Field(
+        description="Content of the message (may be truncated for preview).",
+    )
+    id: str | None = Field(
+        default=None,
+        description="Stable id for cursor/linking (e.g. index).",
+    )
+
+
 class ChatHistoryInput(BaseModel):
     """Input for retrieving chat history."""
 
@@ -177,10 +196,43 @@ class ChatHistoryInput(BaseModel):
         description="Thread ID to persist and continue a multi-turn conversation.",
         examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
     )
+    limit: int = Field(
+        default=50,
+        ge=1,
+        le=200,
+        description="Max number of messages to return per page.",
+    )
+    cursor: str | None = Field(
+        default=None,
+        description="Opaque cursor for pagination (older messages).",
+    )
+    view: Literal["full", "preview"] = Field(
+        default="full",
+        description="full = all fields; preview = type, content (truncated), id only.",
+    )
 
 
 class ChatHistory(BaseModel):
+    """Legacy response: messages only (no cursors)."""
+
     messages: list[ChatMessage]
+
+
+class ChatHistoryResponse(BaseModel):
+    """Paginated chat history with cursors."""
+
+    messages: list[ChatMessage] | list[ChatMessagePreview] = Field(
+        default_factory=list,
+        description="Messages in this page (full or preview by view).",
+    )
+    next_cursor: str | None = Field(
+        default=None,
+        description="Cursor for next page (older messages).",
+    )
+    prev_cursor: str | None = Field(
+        default=None,
+        description="Cursor for previous page (newer messages).",
+    )
 
 
 class ThreadSummary(BaseModel):

@@ -6,53 +6,14 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import StreamableHttpConnection
 from langgraph.graph.state import CompiledStateGraph
 
-from agents.utils import filter_mcp_tools
 from agents.lazy_agent import LazyLoadingAgent
-from agents.middlewares import ConfigurableModelMiddleware, SummarizationMiddleware
+from agents.middlewares import ConfigurableModelMiddleware
 from core import get_model, settings
-from agents.prompts.github import SYSTEM_PROMPT
+from agents.prompts.open_source import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
-ALLOWED_TOOLS = {
-    # User & Profile
-    "get_me",              # Get authenticated user's profile
-    "get_teams",           # Get teams the user belongs to
-    "get_team_members",    # Get team member usernames
-    
-    # Repository & Code
-    "search_repositories", # Find repositories by name/description
-    "get_file_contents",   # Get file/directory contents
-    "search_code",         # Search code across repositories
-    "list_branches",       # List repository branches
-    
-    # Activity & Contributions
-    "list_commits",        # List commits in a repository
-    "get_commit",          # Get commit details with diff
-    "list_pull_requests",  # List PRs in a repository
-    "pull_request_read",   # Get PR details, diff, reviews
-    "search_pull_requests",# Search PRs by author
-    
-    # Issues
-    "list_issues",         # List issues in a repository
-    "issue_read",          # Get issue details/comments
-    "search_issues",       # Search issues
-    
-    # Releases & Tags
-    "list_releases",       # List releases
-    "get_latest_release",  # Get latest release
-    "get_release_by_tag",  # Get release by tag
-    "list_tags",           # List git tags
-    "get_tag",             # Get tag details
-    
-    # Discovery
-    "search_users",        # Find GitHub users
-    "get_label",           # Get repository label
-    "list_issue_types",    # List issue types for org
-}
-
-
-class GitHubMCPAgent(LazyLoadingAgent):
+class OpenSourceAgent(LazyLoadingAgent):
     """GitHub MCP Agent with async initialization for portfolio assistant."""
 
     def __init__(self) -> None:
@@ -86,8 +47,6 @@ class GitHubMCPAgent(LazyLoadingAgent):
             self._mcp_client = MultiServerMCPClient(connections)
             logger.info("MCP client initialized successfully")
             
-#            all_tools = await self._mcp_client.get_tools()
-#            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
             self._mcp_tools = await self._mcp_client.get_tools()
         except Exception as e:
             logger.error(f"Failed to initialize GitHub MCP agent: {e}")
@@ -105,17 +64,12 @@ class GitHubMCPAgent(LazyLoadingAgent):
             tools=self._mcp_tools,
             middleware=[
                 ConfigurableModelMiddleware(),
-                SummarizationMiddleware(
-                    max_tokens_before_summary=1000,
-                    messages_to_keep=4,
-                    use_llm=False
-                ),
             ],
-            name="github-mcp-agent",
+            name="open-source-agent",
             system_prompt=SYSTEM_PROMPT,
             debug=True,
         )
 
 
 # Create the agent instance
-github_mcp_agent = GitHubMCPAgent()
+open_source_agent = OpenSourceAgent()

@@ -1,9 +1,28 @@
-from typing import Annotated
+import logging
+from typing import Annotated, Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core import settings
+
+logger = logging.getLogger(__name__)
+
+
+def get_checkpointer(request: Request) -> Any:
+    """Provide checkpointer from app state, or fall back to default agent's checkpointer."""
+    checkpointer = getattr(request.app.state, "checkpointer", None)
+    if checkpointer is not None:
+        return checkpointer
+    try:
+        from agents import DEFAULT_AGENT, get_agent
+        agent = get_agent(DEFAULT_AGENT)
+        checkpointer = getattr(agent, "checkpointer", None)
+        if checkpointer is not None:
+            return checkpointer
+    except Exception as e:
+        logger.debug("Fallback checkpointer from agent failed: %s", e)
+    return None
 
 
 def verify_bearer(

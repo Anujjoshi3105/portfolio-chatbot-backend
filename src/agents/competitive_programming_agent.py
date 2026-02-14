@@ -6,10 +6,9 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import StreamableHttpConnection
 from langgraph.graph.state import CompiledStateGraph
 
-from agents.utils import filter_mcp_tools
 from agents.lazy_agent import LazyLoadingAgent
-from agents.middlewares import ConfigurableModelMiddleware, SummarizationMiddleware
-from agents.prompts.cpstat import SYSTEM_PROMPT
+from agents.middlewares import ConfigurableModelMiddleware
+from agents.prompts.competitive_programming import SYSTEM_PROMPT
 from core import get_model, settings
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ ALLOWED_TOOLS = {
 }
 
 
-class CPStatAgent(LazyLoadingAgent):
+class CompetitiveProgrammingAgent(LazyLoadingAgent):
     """CP Stat Agent with async initialization for contest and rating info."""
 
     def __init__(self) -> None:
@@ -104,17 +103,12 @@ class CPStatAgent(LazyLoadingAgent):
             tools=self._mcp_tools,
             middleware=[
                 ConfigurableModelMiddleware(),
-                SummarizationMiddleware(
-                    max_tokens_before_summary=1000,
-                    messages_to_keep=4,
-                    use_llm=False
-                ),
             ],
-            name="cpstat-agent",
+            name="competitive-programming-agent",
             system_prompt=SYSTEM_PROMPT,
             debug=True,
         )
 
 
 # Create the agent instance
-cpstat_agent = CPStatAgent()
+competitive_programming_agent = CompetitiveProgrammingAgent()

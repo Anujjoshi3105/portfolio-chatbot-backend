@@ -4,12 +4,17 @@ import json
 import logging
 import re
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
-from langchain_core.messages import AIMessage, AIMessageChunk, AnyMessage, HumanMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    AnyMessage,
+    HumanMessage,
+    ToolMessage,
+)
 from langchain_core.runnables import RunnableConfig
 from langfuse.langchain import CallbackHandler
 from langgraph.types import Command, Interrupt
@@ -21,8 +26,6 @@ from agents.middlewares import FollowUpMiddleware, SafetyMiddleware, UNSAFE_RESP
 from agents.llama_guard import SafetyAssessment
 from core import settings
 from schema import (
-    ChatHistory,
-    ChatHistoryInput,
     ChatMessage,
     Feedback,
     FeedbackResponse,
@@ -31,6 +34,7 @@ from schema import (
     ThreadSummary,
     UserInput,
 )
+from service import history_service
 from service.utils import (
     convert_message_content_to_string,
     langchain_to_chat_message,
@@ -121,6 +125,9 @@ async def invoke_agent(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> 
     agent: AgentGraph = get_agent(agent_id)
     kwargs, run_id = await _handle_input(user_input, agent, agent_id)
 
+    if user_input.user_id and user_input.thread_id:
+        history_service.invalidate_history(user_input.user_id, user_input.thread_id)
+
     # ── Input safety guard ──────────────────────────────────────────
     input_check = await safety.check_input([HumanMessage(content=user_input.message)])
     if input_check.safety_assessment == SafetyAssessment.UNSAFE:
@@ -172,6 +179,9 @@ async def message_generator(
 ) -> AsyncGenerator[str, None]:
     agent: AgentGraph = get_agent(agent_id)
     kwargs, run_id = await _handle_input(user_input, agent, agent_id)
+
+    if user_input.user_id and user_input.thread_id:
+        history_service.invalidate_history(user_input.user_id, user_input.thread_id)
 
     # ── Input safety guard ──────────────────────────────────────────────
     input_check = await safety.check_input([HumanMessage(content=user_input.message)])
@@ -304,48 +314,6 @@ def _checkpoint_thread_id(user_id: str, thread_id: str) -> str:
     return f"{user_id}:{thread_id}"
 
 
-async def get_history(input: ChatHistoryInput) -> ChatHistory:
-    if not (input.user_id or "").strip():
-        raise HTTPException(
-            status_code=422,
-            detail="user_id is required and must be non-empty",
-        )
-    # TODO: Hard-coding DEFAULT_AGENT here is wonky
-    agent: AgentGraph = get_agent(DEFAULT_AGENT)
-    checkpoint_thread_id = _checkpoint_thread_id(input.user_id, input.thread_id)
-    try:
-        state_snapshot = await agent.aget_state(
-            config=RunnableConfig(
-                configurable={
-                    "thread_id": checkpoint_thread_id,
-                    "user_id": input.user_id,
-                },
-                metadata={
-                    "thread_id": input.thread_id,
-                    "user_id": input.user_id,
-                    "agent_id": DEFAULT_AGENT,
-                },
-            )
-        )
-        messages: list[AnyMessage] = state_snapshot.values["messages"]
-        chat_messages: list[ChatMessage] = [langchain_to_chat_message(m) for m in messages]
-        return ChatHistory(messages=chat_messages)
-    except Exception as e:
-        logger.error(f"An exception occurred: {e}")
-        raise HTTPException(status_code=500, detail="Unexpected error")
-
-
-def _iso_ts(dt: datetime | str | None) -> str | None:
-    """Format datetime as ISO 8601 or return None."""
-    if dt is None:
-        return None
-    if isinstance(dt, str):
-        return dt
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.isoformat()
-
-
 async def list_threads(
     user_id: str,
     *,
@@ -354,9 +322,8 @@ async def list_threads(
     search: str | None = None,
 ) -> ThreadList:
     """
-    List thread IDs for a user by querying the checkpointer storage with prefix user_id:.
-    Returns logical thread_ids (without the user prefix), with updated_at when available.
-    Supports pagination (offset/limit) and optional search filter.
+    List thread IDs for a user. Returns logical thread_ids (without user prefix) with preview.
+    Supports pagination and optional search filter.
     """
     if not (user_id or "").strip():
         return ThreadList(threads=[], total=0)
@@ -365,198 +332,68 @@ async def list_threads(
     if checkpointer is None:
         return ThreadList(threads=[], total=0)
     prefix = f"{user_id}:"
-    # List of (logical_id, updated_at_iso | None)
-    rows: list[tuple[str, str | None]] = []
+    logical_ids: list[str] = []
     try:
-        # MongoDB: aggregation for thread_id + max timestamp
         if hasattr(checkpointer, "checkpoint_collection"):
-            coll = checkpointer.checkpoint_collection
-            try:
-                pipeline = [
-                    {"$match": {"thread_id": {"$regex": f"^{re.escape(user_id)}:"}}},
-                    {
-                        "$group": {
-                            "_id": "$thread_id",
-                            "ts": {"$max": {"$ifNull": ["$ts", "$updated_at", "$created_at"]}},
-                        }
-                    },
-                ]
-                async for doc in coll.aggregate(pipeline):
-                    tid = doc.get("_id")
-                    if not isinstance(tid, str) or not tid.startswith(prefix):
-                        continue
-                    logical = tid[len(prefix) :]
-                    ts = doc.get("ts")
-                    rows.append((logical, _iso_ts(ts) if ts else None))
-            except Exception as mongo_err:
-                logger.debug(
-                    "MongoDB aggregation failed, listing by thread_id only: %s",
-                    mongo_err,
-                )
-                raw_ids = await coll.distinct(
-                    "thread_id",
-                    {"thread_id": {"$regex": f"^{re.escape(user_id)}:"}},
-                )
-                for tid in raw_ids:
-                    if isinstance(tid, str) and tid.startswith(prefix):
-                        rows.append((tid[len(prefix) :], None))
-        # Postgres: GROUP BY thread_id, MAX(ts)
+            raw_ids = await checkpointer.checkpoint_collection.distinct(
+                "thread_id",
+                {"thread_id": {"$regex": f"^{re.escape(user_id)}:"}},
+            )
+            for tid in raw_ids:
+                if isinstance(tid, str) and tid.startswith(prefix):
+                    logical_ids.append(tid[len(prefix) :])
         elif hasattr(checkpointer, "pool") or hasattr(checkpointer, "conn"):
-            # AsyncPostgresSaver often uses .pool, but can have .conn
             pool = getattr(checkpointer, "pool", getattr(checkpointer, "conn", None))
-            # If it's a pool, we need an async connection
-            if hasattr(pool, "connection"):
-                conn_ctx = pool.connection()
-            else:
-                conn_ctx = pool # Assume it's already a connection or manages its own
-            
+            conn_ctx = pool.connection() if hasattr(pool, "connection") else pool
             async with conn_ctx as conn:
                 async with conn.cursor() as cur:
-                    try:
-                        # Try various common timestamp column names
-                        await cur.execute(
-                            """
-                            SELECT thread_id, MAX(COALESCE(ts, updated_at, created_at)) AS ts
-                            FROM checkpoints
-                            WHERE thread_id LIKE %s
-                            GROUP BY thread_id
-                            """,
-                            (prefix + "%",),
-                        )
-                    except Exception as pg_err:
-                        logger.debug(
-                            "Postgres MAX(ts) failed, trying metadata: %s",
-                            pg_err,
-                        )
-                        try:
-                            await cur.execute(
-                                """
-                                SELECT thread_id, MAX(created_at) AS ts
-                                FROM checkpoint_metadata
-                                WHERE thread_id LIKE %s
-                                GROUP BY thread_id
-                                """,
-                                (prefix + "%",),
-                            )
-                        except Exception:
-                            await cur.execute(
-                                "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE %s",
-                                (prefix + "%",),
-                            )
-                            for row in await cur.fetchall():
-                                raw = (
-                                    row.get("thread_id")
-                                    if isinstance(row, dict)
-                                    else (row[0] if row else None)
-                                )
-                                if isinstance(raw, str) and raw.startswith(prefix):
-                                    rows.append((raw[len(prefix) :], None))
-                        else:
-                            for row in await cur.fetchall():
-                                raw = row.get("thread_id") if isinstance(row, dict) else row[0]
-                                ts_val = row.get("ts") if isinstance(row, dict) else row[1]
-                                if isinstance(raw, str) and raw.startswith(prefix):
-                                    rows.append((raw[len(prefix) :], _iso_ts(ts_val)))
-                    else:
-                        for row in await cur.fetchall():
-                            raw = (
-                                row.get("thread_id")
-                                if isinstance(row, dict)
-                                else (row[0] if row else None)
-                            )
-                            ts_val = (
-                                row.get("ts")
-                                if isinstance(row, dict)
-                                else (
-                                    row[1]
-                                    if isinstance(row, (list, tuple)) and len(row) > 1
-                                    else None
-                                )
-                            )
-                            if isinstance(raw, str) and raw.startswith(prefix):
-                                rows.append((raw[len(prefix) :], _iso_ts(ts_val)))
-        # SQLite: GROUP BY thread_id, MAX(ts)
+                    await cur.execute(
+                        "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE %s",
+                        (prefix + "%",),
+                    )
+                    for row in await cur.fetchall():
+                        raw = row.get("thread_id") if isinstance(row, dict) else (row[0] if row else None)
+                        if isinstance(raw, str) and raw.startswith(prefix):
+                            logical_ids.append(raw[len(prefix) :])
         elif hasattr(checkpointer, "conn"):
-            conn = checkpointer.conn
-            try:
-                cursor = await conn.execute(
-                    """
-                    SELECT thread_id, MAX(COALESCE(ts, updated_at, created_at)) AS ts
-                    FROM checkpoints
-                    WHERE thread_id LIKE ?
-                    GROUP BY thread_id
-                    """,
-                    (prefix + "%",),
-                )
-                for row in await cursor.fetchall():
-                    raw = row[0] if isinstance(row, (list, tuple)) else row
-                    ts_val = row[1] if isinstance(row, (list, tuple)) and len(row) > 1 else None
-                    if isinstance(raw, str) and raw.startswith(prefix):
-                        rows.append((raw[len(prefix) :], _iso_ts(ts_val)))
-            except Exception as sqlite_err:
-                logger.debug("SQLite MAX(ts) failed, listing by thread_id only: %s", sqlite_err)
-                cursor = await conn.execute(
-                    "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE ?",
-                    (prefix + "%",),
-                )
-                for row in await cursor.fetchall():
-                    raw = row[0] if isinstance(row, (list, tuple)) else row
-                    if isinstance(raw, str) and raw.startswith(prefix):
-                        rows.append((raw[len(prefix) :], None))
+            cursor = await checkpointer.conn.execute(
+                "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE ?",
+                (prefix + "%",),
+            )
+            for row in await cursor.fetchall():
+                raw = row[0] if isinstance(row, (list, tuple)) else row
+                if isinstance(raw, str) and raw.startswith(prefix):
+                    logical_ids.append(raw[len(prefix) :])
         else:
-            logger.warning("Unknown checkpointer type; cannot list threads by prefix")
+            logger.warning("Unknown checkpointer type; cannot list threads")
     except Exception as e:
-        logger.error(f"Error listing threads for user: {e}")
+        logger.error("Error listing threads for user: %s", e)
         raise HTTPException(status_code=500, detail="Failed to list threads") from e
 
-    # Sort by updated_at desc (None last), then by thread_id
-    def _sort_key(item: tuple[str, str | None]) -> tuple[bool, str, str]:
-        logical, ts = item
-        # desc sort: flip characters in timestamp if it exists
-        return (ts is None, (ts or "")[::-1], logical)
+    logical_ids.sort(reverse=True)
 
-    rows.sort(key=_sort_key)
-
-    # Filter by search
     search_clean = (search or "").strip().lower()
     if search_clean:
-        rows = [(logical, ts) for logical, ts in rows if search_clean in logical.lower()]
+        logical_ids = [tid for tid in logical_ids if search_clean in tid.lower()]
 
-    total = len(rows)
-    rows = rows[offset : offset + limit]
+    total = len(logical_ids)
+    page = logical_ids[offset : offset + limit]
 
-    # Fetch additional details (preview, precise timestamp) for the requested page in parallel
-    async def get_thread_summary(logical_id: str, existing_ts: str | None) -> ThreadSummary:
+    async def get_preview(logical_id: str) -> ThreadSummary:
+        preview = None
         try:
             config = RunnableConfig(
-                configurable={
-                    "thread_id": f"{user_id}:{logical_id}",
-                    "user_id": user_id,
-                }
+                configurable={"thread_id": f"{user_id}:{logical_id}", "user_id": user_id},
             )
             state = await agent.aget_state(config)
-            preview = None
-            ts = existing_ts
-            
-            if state.values and "messages" in state.values:
-                msgs = state.values["messages"]
-                if msgs:
-                    # Get the last non-custom message for better preview
-                    last_msg = msgs[-1]
-                    preview = convert_message_content_to_string(last_msg.content)
-                    if preview and len(preview) > 120:
-                        preview = preview[:117] + "..."
-            
-            # If we don't have a timestamp, try to get it from state metadata
-            if not ts and state.metadata:
-                m_ts = state.metadata.get("ts") or state.metadata.get("created_at")
-                if m_ts:
-                    ts = _iso_ts(m_ts)
-            
-            return ThreadSummary(thread_id=logical_id, updated_at=ts, preview=preview)
+            if state.values and "messages" in state.values and state.values["messages"]:
+                last_msg = state.values["messages"][-1]
+                preview = convert_message_content_to_string(last_msg.content)
+                if preview and len(preview) > 120:
+                    preview = preview[:117] + "..."
         except Exception as e:
-            logger.warning(f"Failed to fetch state for thread {logical_id}: {e}")
-            return ThreadSummary(thread_id=logical_id, updated_at=existing_ts, preview=None)
+            logger.debug("Preview for thread %s: %s", logical_id, e)
+        return ThreadSummary(thread_id=logical_id, updated_at=None, preview=preview)
 
-    summaries = await asyncio.gather(*[get_thread_summary(logical, ts) for logical, ts in rows])
-    return ThreadList(threads=list(summaries), total=total)
+    threads = await asyncio.gather(*[get_preview(tid) for tid in page])
+    return ThreadList(threads=list(threads), total=total)

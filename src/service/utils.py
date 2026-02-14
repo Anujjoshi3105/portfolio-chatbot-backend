@@ -1,4 +1,5 @@
 import json
+from typing import Literal
 
 import toons
 from langchain_core.messages import (
@@ -11,7 +12,7 @@ from langchain_core.messages import (
     ChatMessage as LangchainChatMessage,
 )
 
-from schema import ChatMessage
+from schema import ChatMessage, ChatMessagePreview
 
 
 def convert_tool_response_to_toon(content: str) -> str:
@@ -79,6 +80,33 @@ def langchain_to_chat_message(message: BaseMessage) -> ChatMessage:
                 raise ValueError(f"Unsupported chat message role: {message.role}")
         case _:
             raise ValueError(f"Unsupported message type: {message.__class__.__name__}")
+
+
+def message_to_preview(
+    message: BaseMessage,
+    index: int,
+    content_max: int = 200,
+) -> ChatMessagePreview:
+    """Build a minimal preview DTO from a LangChain message."""
+    content = convert_message_content_to_string(message.content)
+    if len(content) > content_max:
+        content = content[: content_max].rstrip() + "…"
+    msg_type: Literal["human", "ai", "tool", "custom"]
+    if isinstance(message, HumanMessage):
+        msg_type = "human"
+    elif isinstance(message, AIMessage):
+        msg_type = "ai"
+    elif isinstance(message, ToolMessage):
+        msg_type = "tool"
+    elif isinstance(message, LangchainChatMessage) and getattr(message, "role", None) == "custom":
+        msg_type = "custom"
+    else:
+        msg_type = "human"
+    return ChatMessagePreview(
+        type=msg_type,
+        content=content,
+        id=str(index),
+    )
 
 
 def remove_tool_calls(content: str | list[str | dict]) -> str | list[str | dict]:

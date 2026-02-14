@@ -1,13 +1,13 @@
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
 
 from agents import DEFAULT_AGENT, get_all_agent_info
 from core import settings
 from schema import (
-    ChatHistory,
     ChatHistoryInput,
+    ChatHistoryResponse,
     ChatMessage,
     Feedback,
     FeedbackResponse,
@@ -17,8 +17,8 @@ from schema import (
     ThreadListInput,
     UserInput,
 )
-from service import agent_service
-from service.dependencies import verify_bearer
+from service import agent_service, history_service
+from service.dependencies import get_checkpointer, verify_bearer
 
 
 router = APIRouter(dependencies=[Depends(verify_bearer)])
@@ -106,13 +106,39 @@ async def feedback(feedback: Feedback) -> FeedbackResponse:
     return await agent_service.submit_feedback(feedback)
 
 
-@router.post("/history")
-async def history(input: ChatHistoryInput) -> ChatHistory:
+@router.get("/history", response_model=ChatHistoryResponse)
+async def history_get(
+    user_id: str = Query(..., description="User ID to scope history."),
+    thread_id: str = Query(..., description="Thread ID for the conversation."),
+    limit: int = Query(50, ge=1, le=200, description="Max messages per page."),
+    cursor: str | None = Query(None, description="Pagination cursor (older messages)."),
+    view: Literal["full", "preview"] = Query("full", description="full or preview (minimal fields)."),
+    checkpointer: Any = Depends(get_checkpointer),
+) -> ChatHistoryResponse:
     """
-    Get chat history for a thread. Requires user_id and thread_id.
-    Returns only messages for the given user's thread.
+    Get chat history for a thread (GET). Prefer this for read-only loading.
+    Returns messages with optional next_cursor and prev_cursor for pagination.
     """
-    return await agent_service.get_history(input)
+    input = ChatHistoryInput(
+        user_id=user_id,
+        thread_id=thread_id,
+        limit=limit,
+        cursor=cursor,
+        view=view,
+    )
+    return await history_service.get_history(checkpointer, input)
+
+
+@router.post("/history", response_model=ChatHistoryResponse)
+async def history_post(
+    input: ChatHistoryInput,
+    checkpointer: Any = Depends(get_checkpointer),
+) -> ChatHistoryResponse:
+    """
+    Get chat history for a thread (POST). Same as GET; body instead of query.
+    Returns messages with optional next_cursor and prev_cursor for pagination.
+    """
+    return await history_service.get_history(checkpointer, input)
 
 
 @router.post("/history/threads")
