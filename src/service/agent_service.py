@@ -163,7 +163,7 @@ async def invoke_agent(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> 
         output.run_id = str(run_id)
 
         # ── Follow-up suggestions ──────────────────────────────────
-        questions = await followup.generate(response["messages"], kwargs["config"])
+        questions = await followup.generate(response["messages"], kwargs["config"], agent_id)
         output.custom_data = {"follow_up": questions}
 
         return output
@@ -283,7 +283,7 @@ async def message_generator(
     try:
         state = await agent.aget_state(config=kwargs["config"])
         messages = state.values.get("messages", [])
-        questions = await followup.generate(messages, kwargs["config"])
+        questions = await followup.generate(messages, kwargs["config"], agent_id)
         followup_msg = ChatMessage(
             type="custom",
             content="",
@@ -343,27 +343,44 @@ async def list_threads(
                 if isinstance(tid, str) and tid.startswith(prefix):
                     logical_ids.append(tid[len(prefix) :])
         elif hasattr(checkpointer, "pool") or hasattr(checkpointer, "conn"):
-            pool = getattr(checkpointer, "pool", getattr(checkpointer, "conn", None))
-            conn_ctx = pool.connection() if hasattr(pool, "connection") else pool
-            async with conn_ctx as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(
-                        "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE %s",
-                        (prefix + "%",),
-                    )
-                    for row in await cur.fetchall():
+            conn = getattr(checkpointer, "pool", getattr(checkpointer, "conn", None))
+            
+            # psycopg AsyncConnectionPool
+            if hasattr(conn, "connection") and callable(conn.connection):
+                async with conn.connection() as pg_conn:
+                    async with pg_conn.cursor() as cur:
+                        await cur.execute(
+                            "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE %s",
+                            (prefix + "%",),
+                        )
+                        for row in await cur.fetchall():
+                            raw = row.get("thread_id") if isinstance(row, dict) else (row[0] if row else None)
+                            if isinstance(raw, str) and raw.startswith(prefix):
+                                logical_ids.append(raw[len(prefix) :])
+            
+            # asyncpg Pool
+            elif hasattr(conn, "acquire") and callable(conn.acquire):
+                async with conn.acquire() as pg_conn:
+                    for row in await pg_conn.fetch(
+                        "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE $1",
+                        prefix + "%",
+                    ):
                         raw = row.get("thread_id") if isinstance(row, dict) else (row[0] if row else None)
                         if isinstance(raw, str) and raw.startswith(prefix):
                             logical_ids.append(raw[len(prefix) :])
-        elif hasattr(checkpointer, "conn"):
-            cursor = await checkpointer.conn.execute(
-                "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE ?",
-                (prefix + "%",),
-            )
-            for row in await cursor.fetchall():
-                raw = row[0] if isinstance(row, (list, tuple)) else row
-                if isinstance(raw, str) and raw.startswith(prefix):
-                    logical_ids.append(raw[len(prefix) :])
+            
+            # SQLite
+            elif hasattr(conn, "execute") and callable(conn.execute):
+                cursor = await conn.execute(
+                    "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE ?",
+                    (prefix + "%",),
+                )
+                for row in await cursor.fetchall():
+                    raw = row[0] if isinstance(row, (list, tuple)) else row
+                    if isinstance(raw, str) and raw.startswith(prefix):
+                        logical_ids.append(raw[len(prefix) :])
+            else:
+                logger.warning("Unknown connection type; cannot list threads")
         else:
             logger.warning("Unknown checkpointer type; cannot list threads")
     except Exception as e:
@@ -397,3 +414,93 @@ async def list_threads(
 
     threads = await asyncio.gather(*[get_preview(tid) for tid in page])
     return ThreadList(threads=list(threads), total=total)
+
+
+async def delete_thread(user_id: str, thread_id: str) -> None:
+    """
+    Delete all checkpoint data for a given (user_id, thread_id) pair.
+    Supports MongoDB, Postgres (asyncpg pool, psycopg_pool), and SQLite checkpointer backends.
+    Raises HTTPException on failure.
+    """
+    user_id = (user_id or "").strip()
+    thread_id = (thread_id or "").strip()
+    if not user_id or not thread_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Both user_id and thread_id are required and must be non-empty.",
+        )
+
+    agent: AgentGraph = get_agent(DEFAULT_AGENT)
+    checkpointer = getattr(agent, "checkpointer", None)
+    if checkpointer is None:
+        raise HTTPException(status_code=500, detail="No checkpointer available.")
+
+    checkpoint_thread_id = _checkpoint_thread_id(user_id, thread_id)
+
+    try:
+        if hasattr(checkpointer, "checkpoint_collection"):
+            # MongoDB backend
+            await checkpointer.checkpoint_collection.delete_many(
+                {"thread_id": checkpoint_thread_id}
+            )
+            # Also delete writes collection if it exists
+            writes_col = getattr(checkpointer, "writes_collection", None)
+            if writes_col is not None:
+                await writes_col.delete_many({"thread_id": checkpoint_thread_id})
+
+        else:
+            conn = getattr(checkpointer, "pool", getattr(checkpointer, "conn", None))
+            if conn is None:
+                raise HTTPException(status_code=500, detail="Unsupported checkpointer type.")
+
+            # psycopg AsyncConnectionPool has 'connection' method
+            if hasattr(conn, "connection") and callable(conn.connection):
+                async with conn.connection() as pg_conn:
+                    async with pg_conn.cursor() as cur:
+                        await cur.execute(
+                            "DELETE FROM checkpoint_writes WHERE thread_id = %s",
+                            (checkpoint_thread_id,),
+                        )
+                        await cur.execute(
+                            "DELETE FROM checkpoints WHERE thread_id = %s",
+                            (checkpoint_thread_id,),
+                        )
+            
+            # asyncpg Pool has 'acquire' method
+            elif hasattr(conn, "acquire") and callable(conn.acquire):
+                async with conn.acquire() as pg_conn:
+                    await pg_conn.execute(
+                        "DELETE FROM checkpoint_writes WHERE thread_id = $1",
+                        checkpoint_thread_id,
+                    )
+                    await pg_conn.execute(
+                        "DELETE FROM checkpoints WHERE thread_id = $1",
+                        checkpoint_thread_id,
+                    )
+
+            # SQLite (aiosqlite.Connection) has 'execute' directly
+            elif hasattr(conn, "execute") and callable(conn.execute):
+                await conn.execute(
+                    "DELETE FROM checkpoint_writes WHERE thread_id = ?",
+                    (checkpoint_thread_id,),
+                )
+                await conn.execute(
+                    "DELETE FROM checkpoints WHERE thread_id = ?",
+                    (checkpoint_thread_id,),
+                )
+                await conn.commit()
+            
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Unknown connection type; cannot delete thread.",
+                )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error deleting thread %s for user %s: %s", thread_id, user_id, e)
+        raise HTTPException(status_code=500, detail="Failed to delete thread.") from e
+
+    # Invalidate in-memory cache so stale history is not served
+    history_service.invalidate_history(user_id, thread_id)

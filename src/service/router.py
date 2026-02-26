@@ -154,3 +154,18 @@ async def history_threads(input: ThreadListInput) -> ThreadList:
         offset=input.offset,
         search=input.search,
     )
+
+
+@router.delete("/history", status_code=status.HTTP_204_NO_CONTENT)
+async def history_delete(
+    user_id: str = Query(..., description="User ID that owns the conversation."),
+    thread_id: str = Query(..., description="Thread ID of the conversation to delete."),
+) -> None:
+    """
+    Delete all chat history for a specific (user_id, thread_id) pair.
+
+    Permanently removes all checkpoint data for the conversation from the
+    underlying store (MongoDB / Postgres / SQLite) and clears the in-memory
+    cache entry. Returns 204 No Content on success.
+    """
+    await agent_service.delete_thread(user_id, thread_id)
