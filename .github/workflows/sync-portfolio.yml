@@ -36,8 +36,9 @@ jobs:
         env:
           # LLM API keys
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NVIDIA_API_KEY: ${{secrets.NVIDIA_API_KEY}}
           OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
-          
+
           # Notion API credentials
           NOTION_BLOG_ID: ${{ secrets.NOTION_BLOG_ID }}
           NOTION_EDUCATION_ID: ${{ secrets.NOTION_EDUCATION_ID }}
