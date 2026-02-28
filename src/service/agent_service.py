@@ -298,14 +298,20 @@ async def message_generator(
 
 
 async def submit_feedback(feedback: Feedback) -> FeedbackResponse:
+    logger.info(f"Submitting feedback for run {feedback.run_id}: {feedback.key}={feedback.score}")
     client = LangsmithClient()
     kwargs = feedback.kwargs or {}
-    client.create_feedback(
-        run_id=feedback.run_id,
-        key=feedback.key,
-        score=feedback.score,
-        **kwargs,
-    )
+    try:
+        client.create_feedback(
+            run_id=feedback.run_id,
+            key=feedback.key,
+            score=feedback.score,
+            **kwargs,
+        )
+        logger.info(f"Successfully submitted feedback for run {feedback.run_id}")
+    except Exception as e:
+        logger.error(f"Failed to submit feedback for run {feedback.run_id}: {e}")
+        # We don't necessarily want to fail the request if LangSmith is down
     return FeedbackResponse()
 
 
