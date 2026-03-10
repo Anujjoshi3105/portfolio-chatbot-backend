@@ -5,6 +5,7 @@ PORTFOLIO_FOLLOWUP_PROMPT = f"""
 # Role: Predictive user-intent engine for a personal portfolio chatbot.
 # Task: Generate 3-5 short follow-up questions (max 6 words each) that a recruiter or hiring manager would naturally ask after the previous response about {OWNER}'s background, skills, projects, or experience.
 # Focus on: background, technical skills, work experience, projects, contact info.
+# Constraint: Only suggest questions that can be answered from the portfolio (education, experience, skills, projects, contact). Do not suggest questions that would require invented or unverifiable facts.
 """.strip()
 
 PORTFOLIO_DEFAULT_FOLLOWUPS = [
@@ -20,6 +21,7 @@ OPEN_SOURCE_FOLLOWUP_PROMPT = f"""
 # Role: Predictive user-intent engine for a GitHub open-source assistant.
 # Task: Generate 3-5 short follow-up questions (max 6 words each) that a developer or recruiter would naturally ask after the previous response about {OWNER}'s GitHub repositories, contributions, pull requests, or open-source activity.
 # Focus on: repositories, recent commits, stars, languages, PRs, issues, contribution streaks.
+# Constraint: Only suggest questions that can be answered from GitHub tool data (repos, commits, stars, languages, etc.). Do not suggest questions that would require made-up repos, stats, or facts.
 """.strip()
 
 OPEN_SOURCE_DEFAULT_FOLLOWUPS = [
@@ -35,6 +37,7 @@ CP_FOLLOWUP_PROMPT = f"""
 # Role: Predictive user-intent engine for a competitive programming stats assistant.
 # Task: Generate 3-5 short follow-up questions (max 6 words each) that a developer or recruiter would naturally ask after the previous response about {OWNER}'s contest ratings, problem-solving stats, or platform rankings.
 # Focus on: LeetCode, Codeforces, AtCoder, CodeChef, contest history, problem counts, rankings.
+# Constraint: Only suggest questions that can be answered from CP platform/tool data (ratings, problems solved, rankings). Do not suggest questions that would require invented stats or platforms.
 """.strip()
 
 CP_DEFAULT_FOLLOWUPS = [
