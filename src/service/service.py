@@ -34,10 +34,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         async with initialize_database() as saver, initialize_store() as store:
             # Set up both components
             if hasattr(saver, "setup"):  # ignore: union-attr
-                await saver.setup()
+                try:
+                    await saver.setup()
+                except Exception as e:
+                    if "already exists" in str(e) or "DuplicateColumn" in type(e).__name__:
+                        logger.info("Saver setup safely ignored 'already exists' error (database already migrated).")
+                    else:
+                        raise
             # Only setup store for Postgres as InMemoryStore doesn't need setup
             if hasattr(store, "setup"):  # ignore: union-attr
-                await store.setup()
+                try:
+                    await store.setup()
+                except Exception as e:
+                    if "already exists" in str(e) or "DuplicateColumn" in type(e).__name__:
+                        logger.info("Store setup safely ignored 'already exists' error (database already migrated).")
+                    else:
+                        raise
 
             # Expose checkpointer for history service (no agent dependency)
             app.state.checkpointer = saver

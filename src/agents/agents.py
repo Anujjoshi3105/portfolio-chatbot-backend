@@ -6,6 +6,7 @@ from langgraph.pregel import Pregel
 from agents.portfolio_agent import portfolio_agent
 from agents.open_source_agent import open_source_agent
 from agents.competitive_programming_agent import competitive_programming_agent
+from agents.vectorless_agent import vectorless_agent
 from agents.lazy_agent import LazyLoadingAgent
 from schema import AgentInfo
 
@@ -55,6 +56,15 @@ agents: dict[str, Agent] = {
             "What is Anuj's Codeforces rank?",
             "Get recent contest performance for anujjoshi3105",
             "Show CP stats across all platforms",
+        ],
+    ),
+    "vectorless-agent": Agent(
+        description="A specialized portfolio assistant that uses stateless Vectorless (LLM-based) retrieval directly from Notion files instead of a vector database.",
+        graph_like=vectorless_agent,
+        prompts=[
+            "What are Anuj's top projects?",
+            "Tell me about Anuj's education",
+            "What is Anuj's work experience?",
         ],
     ),
 }

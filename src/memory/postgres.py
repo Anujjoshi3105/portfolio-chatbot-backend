@@ -69,7 +69,13 @@ async def get_postgres_saver():
     ) as pool:
         try:
             checkpointer = AsyncPostgresSaver(pool)
-            await checkpointer.setup()
+            try:
+                await checkpointer.setup()
+            except Exception as e:
+                if "already exists" in str(e) or "DuplicateColumn" in type(e).__name__:
+                    logger.info("Checkpointer setup safely ignored 'already exists' error (database already migrated).")
+                else:
+                    raise
             yield checkpointer
         finally:
             await pool.close()
@@ -98,7 +104,13 @@ async def get_postgres_store():
     ) as pool:
         try:
             store = AsyncPostgresStore(pool)
-            await store.setup()
+            try:
+                await store.setup()
+            except Exception as e:
+                if "already exists" in str(e) or "DuplicateColumn" in type(e).__name__:
+                    logger.info("Store setup safely ignored 'already exists' error (database already migrated).")
+                else:
+                    raise
             yield store
         finally:
             await pool.close()
