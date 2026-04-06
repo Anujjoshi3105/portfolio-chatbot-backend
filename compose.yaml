@@ -33,3 +33,6 @@ services:
         - path: src/memory/
           action: sync+restart
           target: /app/memory/
+        - path: src/scripts/
+          action: sync+restart
+          target: /app/scripts/
