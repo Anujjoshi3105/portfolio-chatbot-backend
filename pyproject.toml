@@ -17,38 +17,43 @@ requires-python = ">=3.11,<3.14"
 
 dependencies = [
     "duckduckgo-search>=7.3.0",
-    "fastapi ~=0.115.5",
+    "fastapi ~=0.141.0",
     "grpcio >=1.68.0",
     "httpx ~=0.28.0",
-    "jiter ~=0.8.2",
-    "langchain ~=1.0.5",
-    "langchain-core ~=1.0.0",
-    "langchain-community ~=0.4.1",
-    "langchain-anthropic ~=1.0.0",
-    "langchain-aws ~=1.0.0",
+    "openai >=2.45.0,<3.0.0",
+    "python-multipart ~=0.0.20",
+    "jiter >=0.8.2",
+    "langchain ~=1.3.11",
+    "langchain-core ~=1.4.8",
+    "langchain-community ~=0.4.2",
+    "langchain-anthropic ~=1.4.8",
+    "langchain-aws ~=1.6.1",
     "langchain-postgres ~=0.0.9",
-    "langchain-google-genai ~=3.0.0",
+    "langchain-google-genai ~=4.2.6",
     "langchain-google-vertexai>=3.0.3",
-    "langchain-groq ~=1.0.1",
-    "langchain-ollama ~=1.0.0",
-    "langchain-openai ~=1.0.2",
+    "langchain-groq ~=1.1.3",
+    "langchain-ollama ~=1.1.0",
+    "langchain-openai ~=1.3.3",
     "langfuse >=2.65.0",
-    "langgraph ~=1.0.0",
-    "langgraph-checkpoint-mongodb ~=0.1.3",
-    "langgraph-checkpoint-postgres ~=2.0.13",
+    "langgraph ~=1.2.7",
+    "langgraph-checkpoint-mongodb ~=0.4.0",
+    "langgraph-checkpoint-postgres ~=3.1.1",
     "langgraph-checkpoint-sqlite ~=2.0.1",
+    "langgraph-supervisor ~=0.0.31",
     "langsmith ~=0.4.0",
+
     "psycopg[binary,pool] ~=3.2.4",
-    "pydantic ~=2.10.1",
-    "pydantic-settings ~=2.12.0",
+    "pydantic ~=2.13.4",
+    "pydantic-settings ~=2.15.0",
     "python-dotenv ~=1.0.1",
-    "setuptools ~=75.6.0",
+    "setuptools >=75.6.0",
     "tiktoken >=0.8.0",
     "uvicorn ~=0.32.1",
     "langchain-mcp-adapters>=0.1.10",
     "ddgs>=9.9.1",
     "toons>=0.5.2",
     "langchain-nvidia-ai-endpoints>=1.0.4",
+    "ag-ui-langgraph~=0.0.42",
 ]
 
 [dependency-groups]
@@ -61,6 +66,7 @@ dev = [
     "pytest-asyncio",
     "ruff",
     "mypy",
+    "pymarkdownlnt",
 ]
 
 # Group for the minimal dependencies to run just the client and Streamlit app.
@@ -68,7 +74,7 @@ dev = [
 # To install run: `uv sync --frozen --only-group client`
 client = [
     "httpx~=0.28.0",
-    "pydantic ~=2.10.1",
+    "pydantic ~=2.13.4",
     "python-dotenv ~=1.0.1",
 ]
 
@@ -97,3 +103,19 @@ follow_untyped_imports = true
 [[tool.mypy.overrides]]
 module = ["langchain_mcp_adapters.*"]
 ignore_missing_imports = true
+
+# Supply-chain cooldown: resolution only considers releases >=14 days old. Needs the
+# repo's pinned uv version (older uv ignores this and strips it from uv.lock on re-lock).
+[tool.uv]
+exclude-newer = "14 days"
+
+[tool.pymarkdown]
+# Docs use long, unwrapped prose lines rather than hard-wrapping at a fixed
+# column, so line length isn't enforced.
+plugins.md013.enabled = false
+# Inline HTML (e.g.  with width=) is used intentionally in README.md.
+plugins.md033.enabled = false
+# Not every doc needs to start with a top-level heading.
+plugins.md041.enabled = false
+# Allow repeated heading text as long as it's not adjacent siblings.
+plugins.md024.siblings_only = true

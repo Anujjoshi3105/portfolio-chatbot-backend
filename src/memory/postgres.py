@@ -1,13 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
 
-from core.embeddings import get_embeddings
 from langchain_postgres import PGVector
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.store.postgres import AsyncPostgresStore
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
+from core.embeddings import get_embeddings
 from core.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,9 @@ async def get_postgres_saver():
                 await checkpointer.setup()
             except Exception as e:
                 if "already exists" in str(e) or "DuplicateColumn" in type(e).__name__:
-                    logger.info("Checkpointer setup safely ignored 'already exists' error (database already migrated).")
+                    logger.info(
+                        "Checkpointer setup safely ignored 'already exists' error (database already migrated)."
+                    )
                 else:
                     raise
             yield checkpointer
@@ -108,12 +110,15 @@ async def get_postgres_store():
                 await store.setup()
             except Exception as e:
                 if "already exists" in str(e) or "DuplicateColumn" in type(e).__name__:
-                    logger.info("Store setup safely ignored 'already exists' error (database already migrated).")
+                    logger.info(
+                        "Store setup safely ignored 'already exists' error (database already migrated)."
+                    )
                 else:
                     raise
             yield store
         finally:
             await pool.close()
+
 
 def get_pgvector_connection_string() -> str:
     """Build and return the PostgreSQL connection string for vectors from settings."""
@@ -123,6 +128,7 @@ def get_pgvector_connection_string() -> str:
         f"{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/"
         f"{settings.POSTGRES_DB}?sslmode=require"
     )
+
 
 def load_pgvector_store():
     """Get a PostgreSQL vectors store instance."""
@@ -134,13 +140,14 @@ def load_pgvector_store():
         embeddings=get_embeddings(settings.DEFAULT_EMBEDDING_MODEL),
     )
 
+
 def load_pgvector_retriever(k: int = 6):
     store = load_pgvector_store()
     return store.as_retriever(
         search_type="mmr",
         search_kwargs={
             "k": k,
-            "fetch_k": 20,                # candidates
-            "lambda_mult": 0.6,           # relevance vs diversity
+            "fetch_k": 20,  # candidates
+            "lambda_mult": 0.6,  # relevance vs diversity
         },
     )

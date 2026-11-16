@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.pregel import Pregel
 
-from agents.portfolio_agent import portfolio_agent
-from agents.open_source_agent import open_source_agent
 from agents.competitive_programming_agent import competitive_programming_agent
-from agents.vectorless_agent import vectorless_agent
 from agents.lazy_agent import LazyLoadingAgent
+from agents.open_source_agent import open_source_agent
+from agents.portfolio_agent import portfolio_agent
+from agents.vectorless_agent import vectorless_agent
 from schema import AgentInfo
 
 DEFAULT_AGENT = "portfolio-agent"
@@ -68,6 +68,70 @@ agents: dict[str, Agent] = {
         ],
     ),
 }
+
+
+def _register_phase3_agents() -> None:
+    """Register Phase-3 agents after sub-agent singletons are defined.
+
+    Importing supervisor_agent and contact_agent at module level would create a
+    circular dependency (supervisor_agent imports the sub-agent module-level
+    singletons).  We import them here, inside a function, to keep the module
+    import order clean.
+    """
+    from agents.bg_task_agent.bg_task_agent import bg_task_agent
+    from agents.contact_agent import contact_agent  # noqa: F401
+    from agents.github_mcp_agent.github_mcp_agent import github_mcp_agent
+    from agents.supervisor_agent import SupervisorAgent
+
+    supervisor_agent = SupervisorAgent(
+        portfolio=portfolio_agent,
+        open_source=open_source_agent,
+        cp=competitive_programming_agent,
+    )
+
+    agents["supervisor-agent"] = Agent(
+        description=(
+            "A master orchestrator that intelligently routes queries across all of Anuj's "
+            "specialist agents — portfolio background, GitHub open-source activity, and "
+            "competitive programming stats — delivering the most accurate, combined answer."
+        ),
+        graph_like=supervisor_agent,
+        prompts=[
+            "Give me a complete overview of Anuj Joshi",
+            "What are Anuj's GitHub contributions and CP ratings?",
+            "Tell me everything about Anuj's technical skills and projects",
+            "Is Anuj a strong candidate for a senior engineering role?",
+        ],
+    )
+
+    agents["contact-agent"] = Agent(
+        description=(
+            "A guided contact assistant that walks you through sending a message directly to "
+            "Anuj Joshi. It collects your name, email, and message step-by-step with "
+            "human-in-the-loop confirmation before submitting."
+        ),
+        graph_like=contact_agent,
+        prompts=[
+            "I'd like to send Anuj a message",
+            "How can I get in touch with Anuj?",
+            "Contact Anuj about a job opportunity",
+            "Send Anuj a collaboration request",
+        ],
+    )
+
+    agents["background-agent"] = Agent(
+        description="Runs observable long-running background tasks before responding.",
+        graph_like=bg_task_agent,
+        prompts=["Run a background task", "Show task progress"],
+    )
+    agents["github-mcp-agent"] = Agent(
+        description="Uses the configured GitHub Model Context Protocol server when available.",
+        graph_like=github_mcp_agent,
+        prompts=["Summarize my GitHub repositories", "Show recent GitHub activity"],
+    )
+
+
+_register_phase3_agents()
 
 
 async def load_agent(agent_id: str) -> None:

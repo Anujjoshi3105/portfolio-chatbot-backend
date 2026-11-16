@@ -7,8 +7,8 @@ from langchain_community.chat_models import FakeListChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_vertexai import ChatVertexAI
 from langchain_groq import ChatGroq
-from langchain_ollama import ChatOllama
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_ollama import ChatOllama
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 from core.settings import settings
@@ -21,11 +21,11 @@ from schema.models import (
     FakeModelName,
     GoogleModelName,
     GroqModelName,
+    NvidiaModelName,
     OllamaModelName,
     OpenAICompatibleName,
     OpenAIModelName,
     OpenRouterModelName,
-    NvidiaModelName,
     VertexAIModelName,
 )
 
@@ -129,10 +129,10 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
     if model_name in OllamaModelName:
         if settings.OLLAMA_BASE_URL:
             chat_ollama = ChatOllama(
-                model=settings.OLLAMA_MODEL, temperature=0.5, base_url=settings.OLLAMA_BASE_URL
+                model=api_model_name, temperature=0.5, base_url=settings.OLLAMA_BASE_URL
             )
         else:
-            chat_ollama = ChatOllama(model=settings.OLLAMA_MODEL, temperature=0.5)
+            chat_ollama = ChatOllama(model=api_model_name, temperature=0.5)
         return chat_ollama
     if model_name in OpenRouterModelName:
         return ChatOpenAI(

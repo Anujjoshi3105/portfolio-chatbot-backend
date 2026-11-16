@@ -1,0 +1,11 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "portfolio-agent": "./src/agents/portfolio_agent.py:portfolio_agent",
+    "open-source-agent": "./src/agents/open_source_agent.py:open_source_agent",
+    "competitive-programming-agent": "./src/agents/competitive_programming_agent.py:competitive_programming_agent",
+    "contact-agent": "./src/agents/contact_agent.py:contact_agent",
+    "background-agent": "./src/agents/bg_task_agent/bg_task_agent.py:bg_task_agent"
+  },
+  "env": ".env"
+}

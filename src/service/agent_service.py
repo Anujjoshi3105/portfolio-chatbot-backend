@@ -11,7 +11,6 @@ from fastapi import HTTPException
 from langchain_core.messages import (
     AIMessage,
     AIMessageChunk,
-    AnyMessage,
     HumanMessage,
     ToolMessage,
 )
@@ -22,8 +21,8 @@ from langsmith import Client as LangsmithClient
 from langsmith import uuid7
 
 from agents import DEFAULT_AGENT, AgentGraph, get_agent
-from agents.middlewares import FollowUpMiddleware, SafetyMiddleware, UNSAFE_RESPONSE
 from agents.llama_guard import SafetyAssessment
+from agents.middlewares import UNSAFE_RESPONSE, FollowUpMiddleware, SafetyMiddleware
 from core import settings
 from schema import (
     ChatMessage,
@@ -35,16 +34,28 @@ from schema import (
     UserInput,
 )
 from service import history_service
+from service.threads import list_user_threads
 from service.utils import (
     convert_message_content_to_string,
     langchain_to_chat_message,
-    remove_tool_calls,
 )
 
 logger = logging.getLogger(__name__)
 
 safety = SafetyMiddleware()
 followup = FollowUpMiddleware()
+
+
+def _resolve_agent(agent_id: str) -> AgentGraph:
+    """Resolve an agent into a consistent HTTP-facing error contract."""
+    try:
+        return get_agent(agent_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found") from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Agent '{agent_id}' is temporarily unavailable"
+        ) from exc
 
 
 async def _handle_input(
@@ -122,11 +133,11 @@ def _create_ai_message(parts: dict) -> AIMessage:
 
 
 async def invoke_agent(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> ChatMessage:
-    agent: AgentGraph = get_agent(agent_id)
+    agent = _resolve_agent(agent_id)
     kwargs, run_id = await _handle_input(user_input, agent, agent_id)
 
     if user_input.user_id and user_input.thread_id:
-        history_service.invalidate_history(user_input.user_id, user_input.thread_id)
+        await history_service.invalidate_history(user_input.user_id, user_input.thread_id)
 
     # ── Input safety guard ──────────────────────────────────────────
     input_check = await safety.check_input([HumanMessage(content=user_input.message)])
@@ -148,9 +159,7 @@ async def invoke_agent(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> 
             # ── Output safety guard ─────────────────────────────────
             output_check = await safety.check_output(response["messages"])
             if output_check.safety_assessment == SafetyAssessment.UNSAFE:
-                output = langchain_to_chat_message(
-                    AIMessage(content=UNSAFE_RESPONSE)
-                )
+                output = langchain_to_chat_message(AIMessage(content=UNSAFE_RESPONSE))
         elif response_type == "updates" and "__interrupt__" in response:
             # The last thing to occur was an interrupt
             # Return the value of the first interrupt as an AIMessage
@@ -177,11 +186,16 @@ async def invoke_agent(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> 
 async def message_generator(
     user_input: StreamInput, agent_id: str = DEFAULT_AGENT
 ) -> AsyncGenerator[str, None]:
-    agent: AgentGraph = get_agent(agent_id)
+    try:
+        agent = _resolve_agent(agent_id)
+    except HTTPException as exc:
+        yield f"data: {json.dumps({'type': 'error', 'content': exc.detail})}\n\n"
+        yield "data: [DONE]\n\n"
+        return
     kwargs, run_id = await _handle_input(user_input, agent, agent_id)
 
     if user_input.user_id and user_input.thread_id:
-        history_service.invalidate_history(user_input.user_id, user_input.thread_id)
+        await history_service.invalidate_history(user_input.user_id, user_input.thread_id)
 
     # ── Input safety guard ──────────────────────────────────────────────
     input_check = await safety.check_input([HumanMessage(content=user_input.message)])
@@ -337,6 +351,11 @@ async def list_threads(
     checkpointer = getattr(agent, "checkpointer", None)
     if checkpointer is None:
         return ThreadList(threads=[], total=0)
+    # Prefer checkpoint metadata heads; it avoids backend-specific SQL/Mongo queries
+    # and works consistently across supported LangGraph savers.
+    if hasattr(checkpointer, "alist") and not search and offset == 0:
+        summaries = await list_user_threads(checkpointer, user_id, DEFAULT_AGENT, limit)
+        return ThreadList(threads=summaries, total=len(summaries))
     prefix = f"{user_id}:"
     logical_ids: list[str] = []
     try:
@@ -350,7 +369,7 @@ async def list_threads(
                     logical_ids.append(tid[len(prefix) :])
         elif hasattr(checkpointer, "pool") or hasattr(checkpointer, "conn"):
             conn = getattr(checkpointer, "pool", getattr(checkpointer, "conn", None))
-            
+
             # psycopg AsyncConnectionPool
             if hasattr(conn, "connection") and callable(conn.connection):
                 async with conn.connection() as pg_conn:
@@ -360,10 +379,14 @@ async def list_threads(
                             (prefix + "%",),
                         )
                         for row in await cur.fetchall():
-                            raw = row.get("thread_id") if isinstance(row, dict) else (row[0] if row else None)
+                            raw = (
+                                row.get("thread_id")
+                                if isinstance(row, dict)
+                                else (row[0] if row else None)
+                            )
                             if isinstance(raw, str) and raw.startswith(prefix):
                                 logical_ids.append(raw[len(prefix) :])
-            
+
             # asyncpg Pool
             elif hasattr(conn, "acquire") and callable(conn.acquire):
                 async with conn.acquire() as pg_conn:
@@ -371,10 +394,14 @@ async def list_threads(
                         "SELECT DISTINCT thread_id FROM checkpoints WHERE thread_id LIKE $1",
                         prefix + "%",
                     ):
-                        raw = row.get("thread_id") if isinstance(row, dict) else (row[0] if row else None)
+                        raw = (
+                            row.get("thread_id")
+                            if isinstance(row, dict)
+                            else (row[0] if row else None)
+                        )
                         if isinstance(raw, str) and raw.startswith(prefix):
                             logical_ids.append(raw[len(prefix) :])
-            
+
             # SQLite
             elif hasattr(conn, "execute") and callable(conn.execute):
                 cursor = await conn.execute(
@@ -471,7 +498,7 @@ async def delete_thread(user_id: str, thread_id: str) -> None:
                             "DELETE FROM checkpoints WHERE thread_id = %s",
                             (checkpoint_thread_id,),
                         )
-            
+
             # asyncpg Pool has 'acquire' method
             elif hasattr(conn, "acquire") and callable(conn.acquire):
                 async with conn.acquire() as pg_conn:
@@ -495,7 +522,7 @@ async def delete_thread(user_id: str, thread_id: str) -> None:
                     (checkpoint_thread_id,),
                 )
                 await conn.commit()
-            
+
             else:
                 raise HTTPException(
                     status_code=500,
@@ -509,4 +536,4 @@ async def delete_thread(user_id: str, thread_id: str) -> None:
         raise HTTPException(status_code=500, detail="Failed to delete thread.") from e
 
     # Invalidate in-memory cache so stale history is not served
-    history_service.invalidate_history(user_id, thread_id)
+    await history_service.invalidate_history(user_id, thread_id)

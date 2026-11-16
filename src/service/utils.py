@@ -1,7 +1,6 @@
-import json
-from typing import Literal
+from typing import Any, Literal
 
-import toons
+from fastapi import HTTPException
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -12,21 +11,19 @@ from langchain_core.messages import (
     ChatMessage as LangchainChatMessage,
 )
 
+from core import settings
 from schema import ChatMessage, ChatMessagePreview
 
 
-def convert_tool_response_to_toon(content: str) -> str:
-    """
-    Convert JSON tool response to TOON format to reduce tokens (30–60% fewer than JSON).
-    https://pypi.org/project/toons/
-    """
-    if not content or not isinstance(content, str):
-        return content
-    try:
-        data = json.loads(content)
-    except (json.JSONDecodeError, TypeError):
-        return content
-    return toons.dumps(data)
+def ensure_model_available(model: Any) -> None:
+    """Raise 400 if `model` isn't in the operator's AVAILABLE_MODELS allowlist."""
+    if model not in settings.AVAILABLE_MODELS:
+        allowed = [m.value if hasattr(m, "value") else str(m) for m in settings.AVAILABLE_MODELS]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Model '{model}' is not available. Allowed: {allowed}",
+        )
+
 
 def convert_message_content_to_string(content: str | list[str | dict]) -> str:
     if isinstance(content, str):
@@ -90,7 +87,7 @@ def message_to_preview(
     """Build a minimal preview DTO from a LangChain message."""
     content = convert_message_content_to_string(message.content)
     if len(content) > content_max:
-        content = content[: content_max].rstrip() + "…"
+        content = content[:content_max].rstrip() + "…"
     msg_type: Literal["human", "ai", "tool", "custom"]
     if isinstance(message, HumanMessage):
         msg_type = "human"

@@ -1,7 +1,4 @@
 import logging
-from typing import List
-
-from pydantic import BaseModel, Field, field_validator
 
 from langchain_core.messages import (
     AnyMessage,
@@ -9,14 +6,15 @@ from langchain_core.messages import (
 )
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel, Field, field_validator
 
-from core import get_model, settings
 from agents.prompts.followup import (
     DEFAULT_FOLLOWUP_PROMPTS,
+    DEFAULT_FOLLOWUP_PROMPTS_MAP,
     FOLLOWUP_GENERATION_PROMPT,
     FOLLOWUP_PROMPTS,
-    DEFAULT_FOLLOWUP_PROMPTS_MAP,
 )
+from core import get_model, settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 class FollowUpOutput(BaseModel):
     """Schema for follow-up generation response."""
 
-    questions: List[str] = Field(
+    questions: list[str] = Field(
         min_length=1,
         max_length=5,
         description="List of 1-5 suggested follow-up questions for the user.",
@@ -32,7 +30,7 @@ class FollowUpOutput(BaseModel):
 
     @field_validator("questions")
     @classmethod
-    def validate_questions(cls, value: List[str]) -> List[str]:
+    def validate_questions(cls, value: list[str]) -> list[str]:
         cleaned = [q.strip() for q in value if q and q.strip()]
         if not cleaned:
             raise ValueError("Questions list cannot be empty")
@@ -44,10 +42,10 @@ class FollowUpMiddleware:
 
     async def generate(
         self,
-        messages: List[AnyMessage],
+        messages: list[AnyMessage],
         config: RunnableConfig,
         agent_id: str = "portfolio-agent",
-    ) -> List[str]:
+    ) -> list[str]:
         # Select agent-specific prompt and fallback defaults
         prompt = FOLLOWUP_PROMPTS.get(agent_id, FOLLOWUP_GENERATION_PROMPT)
         defaults = DEFAULT_FOLLOWUP_PROMPTS_MAP.get(agent_id, DEFAULT_FOLLOWUP_PROMPTS)

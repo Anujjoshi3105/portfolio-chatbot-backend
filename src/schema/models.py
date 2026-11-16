@@ -85,26 +85,27 @@ class VertexAIModelName(StrEnum):
 class GroqModelName(StrEnum):
     """https://console.groq.com/docs/models"""
 
-#    LLAMA_GUARD_4_12B = "meta-llama/llama-guard-4-12b"
-#    LLAMA_31_8B_INSTANT = "llama-3.1-8b-instant"
-#    LLAMA_33_70B_VERSATILE = "llama-3.3-70b-versatile"
-#    LLAMA_4_MAVERICK_17B_128E = "meta-llama/llama-4-maverick-17b-128e-instruct"
-#    LLAMA_4_SCOUT_17B_16E = "meta-llama/llama-4-scout-17b-16e-instruct"
+    #    LLAMA_GUARD_4_12B = "meta-llama/llama-guard-4-12b"
+    #    LLAMA_31_8B_INSTANT = "llama-3.1-8b-instant"
+    #    LLAMA_33_70B_VERSATILE = "llama-3.3-70b-versatile"
+    #    LLAMA_4_MAVERICK_17B_128E = "meta-llama/llama-4-maverick-17b-128e-instruct"
+    #    LLAMA_4_SCOUT_17B_16E = "meta-llama/llama-4-scout-17b-16e-instruct"
     LLAMA_PROMPT_GUARD_2_22M = "meta-llama/llama-prompt-guard-2-22m"
     LLAMA_PROMPT_GUARD_2_86M = "meta-llama/llama-prompt-guard-2-86m"
-#    OPENAI_GPT_OSS_120B = "openai/gpt-oss-120b"
-#    OPENAI_GPT_OSS_20B = "openai/gpt-oss-20b"
+    #    OPENAI_GPT_OSS_120B = "openai/gpt-oss-120b"
+    #    OPENAI_GPT_OSS_20B = "openai/gpt-oss-20b"
     OPENAI_GPT_OSS_SAFEGUARD_20B = "openai/gpt-oss-safeguard-20b"
-#    GROQ_COMPOUND = "groq/compound"
+    #    GROQ_COMPOUND = "groq/compound"
     GROQ_COMPOUND_MINI = "groq/compound-mini"
-#    QWEN_3_32B = "qwen/qwen3-32b"
-#    KIMI_K2_INSTRUCT = "moonshotai/kimi-k2-instruct"
-#    KIMI_K2_INSTRUCT_0905 = "moonshotai/kimi-k2-instruct-0905"
+    #    QWEN_3_32B = "qwen/qwen3-32b"
+    #    KIMI_K2_INSTRUCT = "moonshotai/kimi-k2-instruct"
+    #    KIMI_K2_INSTRUCT_0905 = "moonshotai/kimi-k2-instruct-0905"
     ORPHEUS_ARABIC_SAUDI = "canopylabs/orpheus-arabic-saudi"
     ORPHEUS_V1_ENGLISH = "canopylabs/orpheus-v1-english"
-#    WHISPER_LARGE_V3 = "whisper-large-v3"
+    #    WHISPER_LARGE_V3 = "whisper-large-v3"
     WHISPER_LARGE_V3_TURBO = "whisper-large-v3-turbo"
     ALLAM_2_7B = "allam-2-7b"
+
 
 class AWSModelName(StrEnum):
     """https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html"""
@@ -136,23 +137,23 @@ class OpenRouterModelName(StrEnum):
 class NvidiaModelName(StrEnum):
     """https://build.nvidia.com/explore/discover"""
 
-#    ABACUSAI_DRACARYS_LLAMA_3_1_70B_INSTRUCT = "abacusai/dracarys-llama-3.1-70b-instruct"
-#    ADEPT_FUYU_8B = "adept/fuyu-8b"
-#    AI21LABS_JAMBA_1_5_LARGE_INSTRUCT = "ai21labs/jamba-1.5-large-instruct"
-#    AI21LABS_JAMBA_1_5_MINI_INSTRUCT = "ai21labs/jamba-1.5-mini-instruct"
-#    AISINGAPORE_SEA_LION_7B_INSTRUCT = "aisingapore/sea-lion-7b-instruct"
-#    BAAI_GET_M3 = "baai/get-m3"
-#    BAICHUAN_INC_BAICHUAN2_13B_CHAT = "baichuan-inc/baichuan2-13b-chat"
-#    BIGCODE_STARCODER2_15B = "bigcode/starcoder2-15b"
-#    BIGCODE_STARCODER2_7B = "bigcode/starcoder2-7b"
-#    BYTEDANCE_SEED_OSS_36B_INSTRUCT = "bytedance/seed-oss-36b-instruct"
-#    DATABRICKS_DBRX_INSTRUCT = "databricks/dbrx-instruct"
-#    DEEPSEEK_AI_DEEPSEEK_CODER_6_7B_INSTRUCT = "deepseek-ai/deepseek-coder-6.7b-instruct"
-#    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_LLAMA_8B = "deepseek-ai/deepseek-r1-distill-llama-8b"
-#    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_QWEN_14B = "deepseek-ai/deepseek-r1-distill-qwen-14b"
-#    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_QWEN_32B = "deepseek-ai/deepseek-r1-distill-qwen-32b"
-#    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_QWEN_7B = "deepseek-ai/deepseek-r1-distill-qwen-7b"
-#    DEEPSEEK_AI_DEEPSEEK_V3_1 = "deepseek-ai/deepseek-v3.1"
+    #    ABACUSAI_DRACARYS_LLAMA_3_1_70B_INSTRUCT = "abacusai/dracarys-llama-3.1-70b-instruct"
+    #    ADEPT_FUYU_8B = "adept/fuyu-8b"
+    #    AI21LABS_JAMBA_1_5_LARGE_INSTRUCT = "ai21labs/jamba-1.5-large-instruct"
+    #    AI21LABS_JAMBA_1_5_MINI_INSTRUCT = "ai21labs/jamba-1.5-mini-instruct"
+    #    AISINGAPORE_SEA_LION_7B_INSTRUCT = "aisingapore/sea-lion-7b-instruct"
+    #    BAAI_GET_M3 = "baai/get-m3"
+    #    BAICHUAN_INC_BAICHUAN2_13B_CHAT = "baichuan-inc/baichuan2-13b-chat"
+    #    BIGCODE_STARCODER2_15B = "bigcode/starcoder2-15b"
+    #    BIGCODE_STARCODER2_7B = "bigcode/starcoder2-7b"
+    #    BYTEDANCE_SEED_OSS_36B_INSTRUCT = "bytedance/seed-oss-36b-instruct"
+    #    DATABRICKS_DBRX_INSTRUCT = "databricks/dbrx-instruct"
+    #    DEEPSEEK_AI_DEEPSEEK_CODER_6_7B_INSTRUCT = "deepseek-ai/deepseek-coder-6.7b-instruct"
+    #    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_LLAMA_8B = "deepseek-ai/deepseek-r1-distill-llama-8b"
+    #    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_QWEN_14B = "deepseek-ai/deepseek-r1-distill-qwen-14b"
+    #    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_QWEN_32B = "deepseek-ai/deepseek-r1-distill-qwen-32b"
+    #    DEEPSEEK_AI_DEEPSEEK_R1_DISTILL_QWEN_7B = "deepseek-ai/deepseek-r1-distill-qwen-7b"
+    #    DEEPSEEK_AI_DEEPSEEK_V3_1 = "deepseek-ai/deepseek-v3.1"
     DEEPSEEK_AI_DEEPSEEK_V3_1_TERMINUS = "deepseek-ai/deepseek-v3.1-terminus"
     DEEPSEEK_AI_DEEPSEEK_V3_2 = "deepseek-ai/deepseek-v3.2"
     GOOGLE_CODEGEMMA_1_1_7B = "google/codegemma-1.1-7b"
@@ -181,8 +182,12 @@ class NvidiaModelName(StrEnum):
     IBM_GRANITE_GUARDIAN_3_0_8B = "ibm/granite-guardian-3.0-8b"
     IGENIUS_COLOSSEUM_355B_INSTRUCT_16K = "igenius/colosseum_355b_instruct_16k"
     IGENIUS_ITALIA_10B_INSTRUCT_16K = "igenius/italia_10b_instruct_16k"
-    INSTITUTE_OF_SCIENCE_TOKYO_LLAMA_3_1_SWALLOW_70B_INSTRUCT_V0_1 = "institute-of-science-tokyo/llama-3.1-swallow-70b-instruct-v0.1"
-    INSTITUTE_OF_SCIENCE_TOKYO_LLAMA_3_1_SWALLOW_8B_INSTRUCT_V0_1 = "institute-of-science-tokyo/llama-3.1-swallow-8b-instruct-v0.1"
+    INSTITUTE_OF_SCIENCE_TOKYO_LLAMA_3_1_SWALLOW_70B_INSTRUCT_V0_1 = (
+        "institute-of-science-tokyo/llama-3.1-swallow-70b-instruct-v0.1"
+    )
+    INSTITUTE_OF_SCIENCE_TOKYO_LLAMA_3_1_SWALLOW_8B_INSTRUCT_V0_1 = (
+        "institute-of-science-tokyo/llama-3.1-swallow-8b-instruct-v0.1"
+    )
     MARIN_MARIN_8B_INSTRUCT = "marin/marin-8b-instruct"
     MEDIATEK_BREEZE_7B_INSTRUCT = "mediatek/breeze-7b-instruct"
     META_CODELLAMA_70B = "meta/codellama-70b"
@@ -234,7 +239,7 @@ class NvidiaModelName(StrEnum):
     MISTRALAI_MIXTRAL_8X22B_INSTRUCT_V0_1 = "mistralai/mixtral-8x22b-instruct-v0.1"
     MISTRALAI_MIXTRAL_8X22B_V0_1 = "mistralai/mixtral-8x22b-v0.1"
     MISTRALAI_MIXTRAL_8X7B_INSTRUCT_V0_1 = "mistralai/mixtral-8x7b-instruct-v0.1"
-#    MODEL_01_AI_YI_LARGE = "01-ai/yi-large"
+    #    MODEL_01_AI_YI_LARGE = "01-ai/yi-large"
     MOONSHOTAI_KIMI_K2_5 = "moonshotai/kimi-k2.5"
     MOONSHOTAI_KIMI_K2_INSTRUCT = "moonshotai/kimi-k2-instruct"
     MOONSHOTAI_KIMI_K2_INSTRUCT_0905 = "moonshotai/kimi-k2-instruct-0905"
@@ -253,7 +258,9 @@ class NvidiaModelName(StrEnum):
     NVIDIA_LLAMA_3_1_NEMOTRON_NANO_VL_8B_V1 = "nvidia/llama-3.1-nemotron-nano-vl-8b-v1"
     NVIDIA_LLAMA_3_1_NEMOTRON_SAFETY_GUARD_8B_V3 = "nvidia/llama-3.1-nemotron-safety-guard-8b-v3"
     NVIDIA_LLAMA_3_1_NEMOTRON_ULTRA_253B_V1 = "nvidia/llama-3.1-nemotron-ultra-253b-v1"
-    NVIDIA_LLAMA_3_2_NEMORETRIEVER_1B_VLM_EMBED_V1 = "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1"
+    NVIDIA_LLAMA_3_2_NEMORETRIEVER_1B_VLM_EMBED_V1 = (
+        "nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1"
+    )
     NVIDIA_LLAMA_3_2_NEMORETRIEVER_300M_EMBED_V1 = "nvidia/llama-3.2-nemoretriever-300m-embed-v1"
     NVIDIA_LLAMA_3_2_NEMORETRIEVER_300M_EMBED_V2 = "nvidia/llama-3.2-nemoretriever-300m-embed-v2"
     NVIDIA_LLAMA_3_2_NV_EMBEDQA_1B_V1 = "nvidia/llama-3.2-nv-embedqa-1b-v1"
@@ -308,7 +315,9 @@ class NvidiaModelName(StrEnum):
     STOCKMARK_STOCKMARK_2_100B_INSTRUCT = "stockmark/stockmark-2-100b-instruct"
     THUDM_CHATGLM3_6B = "thudm/chatglm3-6b"
     TIIUAE_FALCON3_7B_INSTRUCT = "tiiuae/falcon3-7b-instruct"
-    TOKYOTECH_LLM_LLAMA_3_SWALLOW_70B_INSTRUCT_V0_1 = "tokyotech-llm/llama-3-swallow-70b-instruct-v0.1"
+    TOKYOTECH_LLM_LLAMA_3_SWALLOW_70B_INSTRUCT_V0_1 = (
+        "tokyotech-llm/llama-3-swallow-70b-instruct-v0.1"
+    )
     UPSTAGE_SOLAR_10_7B_INSTRUCT = "upstage/solar-10.7b-instruct"
     UTTER_PROJECT_EUROLLM_9B_INSTRUCT = "utter-project/eurollm-9b-instruct"
     WRITER_PALMYRA_CREATIVE_122B = "writer/palmyra-creative-122b"
@@ -318,6 +327,7 @@ class NvidiaModelName(StrEnum):
     YENTINGLIN_LLAMA_3_TAIWAN_70B_INSTRUCT = "yentinglin/llama-3-taiwan-70b-instruct"
     ZYPHRA_ZAMBA2_7B_INSTRUCT = "zyphra/zamba2-7b-instruct"
     Z_AI_GLM4_7 = "z-ai/glm4.7"
+
 
 class OpenAICompatibleName(StrEnum):
     """https://platform.openai.com/docs/guides/text-generation"""
@@ -346,6 +356,7 @@ AllModelEnum: TypeAlias = (
     | NvidiaModelName
     | FakeModelName
 )
+
 
 class NvidiaEmbeddingModelName(StrEnum):
     """https://build.nvidia.com/explore/discover"""

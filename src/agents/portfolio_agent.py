@@ -38,4 +38,5 @@ class PortfolioAgent(LazyLoadingAgent):
             debug=True,
         )
 
+
 portfolio_agent = PortfolioAgent()

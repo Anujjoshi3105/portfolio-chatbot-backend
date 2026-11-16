@@ -29,7 +29,6 @@ ALLOWED_TOOLS = {
     "leetcode_get_languages",
     "leetcode_get_progress",
     "leetcode_get_contest_ranking_info",
-
     # Codeforces - User Stats & Content
     "codeforces_get_rating",
     "codeforces_get_contest_history",
@@ -38,14 +37,11 @@ ALLOWED_TOOLS = {
     "codeforces_get_solved_problems",
     "codeforces_get_blog_entry",
     "codeforces_get_blog_comments",
-
     # AtCoder
     "atcoder_get_rating",
     "atcoder_get_history",
-
     # CodeChef
     "codechef_get_rating",
-
     # GeeksforGeeks
     "gfg_get_rating",
     "gfg_get_submissions",
@@ -81,12 +77,14 @@ class CompetitiveProgrammingAgent(LazyLoadingAgent):
             }
 
             self._mcp_client = MultiServerMCPClient(connections)
-            logger.info(f"CP Stat client initialized successfully with URL: {settings.CONTEST_API_URL}")
+            logger.info(
+                f"CP Stat client initialized successfully with URL: {settings.CONTEST_API_URL}"
+            )
 
-#            all_tools = await self._mcp_client.get_tools()
-#            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
+            #            all_tools = await self._mcp_client.get_tools()
+            #            self._mcp_tools = filter_mcp_tools(all_tools, ALLOWED_TOOLS)
             self._mcp_tools = await self._mcp_client.get_tools()
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize CP Stat agent: {e}")
             self._mcp_tools = []

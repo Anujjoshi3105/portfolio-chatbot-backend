@@ -14,26 +14,26 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from schema.models import (
+    AllEmbeddingModelEnum,
     AllModelEnum,
     AnthropicModelName,
     AWSModelName,
     AzureOpenAIModelName,
     DeepseekModelName,
     FakeModelName,
+    GoogleEmbeddingModelName,
     GoogleModelName,
     GroqModelName,
+    NvidiaEmbeddingModelName,
     NvidiaModelName,
+    OllamaEmbeddingModelName,
     OllamaModelName,
     OpenAICompatibleName,
+    OpenAIEmbeddingModelName,
     OpenAIModelName,
     OpenRouterModelName,
     Provider,
     VertexAIModelName,
-    AllEmbeddingModelEnum,
-    OpenAIEmbeddingModelName,
-    GoogleEmbeddingModelName,
-    OllamaEmbeddingModelName,
-    NvidiaEmbeddingModelName,
 )
 
 
@@ -85,7 +85,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: LogLevel = LogLevel.WARNING
 
     AUTH_SECRET: SecretStr | None = None
-    CORS_ORIGINS: Annotated[Any, BeforeValidator(lambda x: x.split(",") if isinstance(x, str) else x)] = [
+    CORS_ORIGINS: Annotated[
+        Any, BeforeValidator(lambda x: x.split(",") if isinstance(x, str) else x)
+    ] = [
         "http://localhost:3000",
         "http://localhost:5173",
     ]
@@ -164,6 +166,14 @@ class Settings(BaseSettings):
     MONGO_USER: str | None = None
     MONGO_PASSWORD: SecretStr | None = None
     MONGO_AUTH_SOURCE: str | None = None
+    MONGO_TLS: bool = False
+
+    # Optional voice providers. Voice is disabled unless a provider is selected.
+    VOICE_STT_PROVIDER: str | None = None
+    VOICE_TTS_PROVIDER: str | None = None
+    VOICE_MAX_UPLOAD_BYTES: int = 25 * 1024 * 1024
+    DEEPGRAM_API_KEY: SecretStr | None = None
+    ELEVENLABS_API_KEY: SecretStr | None = None
 
     # Azure OpenAI Settings
     AZURE_OPENAI_API_KEY: SecretStr | None = None
@@ -276,7 +286,9 @@ class Settings(BaseSettings):
             match provider:
                 case Provider.OPENAI:
                     if self.DEFAULT_EMBEDDING_MODEL is None:
-                        self.DEFAULT_EMBEDDING_MODEL = OpenAIEmbeddingModelName.TEXT_EMBEDDING_3_SMALL
+                        self.DEFAULT_EMBEDDING_MODEL = (
+                            OpenAIEmbeddingModelName.TEXT_EMBEDDING_3_SMALL
+                        )
                     self.AVAILABLE_EMBEDDING_MODELS.update(set(OpenAIEmbeddingModelName))
                 case Provider.GOOGLE:
                     if self.DEFAULT_EMBEDDING_MODEL is None:
@@ -290,7 +302,9 @@ class Settings(BaseSettings):
                         self.OLLAMA_EMBEDDING_MODEL = OllamaEmbeddingModelName.NOMIC_EMBED_TEXT
                 case Provider.NVIDIA:
                     if self.DEFAULT_EMBEDDING_MODEL is None:
-                        self.DEFAULT_EMBEDDING_MODEL = NvidiaEmbeddingModelName.NV_EMBEDQA_MISTRAL_7B_V2
+                        self.DEFAULT_EMBEDDING_MODEL = (
+                            NvidiaEmbeddingModelName.NV_EMBEDQA_MISTRAL_7B_V2
+                        )
                     self.AVAILABLE_EMBEDDING_MODELS.update(set(NvidiaEmbeddingModelName))
 
     @computed_field  # type: ignore[prop-decorator]

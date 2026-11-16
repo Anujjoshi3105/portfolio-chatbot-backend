@@ -1,9 +1,9 @@
 import re
+
 import yaml
 
-FRONTMATTER_REGEX = re.compile(
-    r"^---\s*\n(.*?)\n---\s*\n(.*)", re.DOTALL
-)
+FRONTMATTER_REGEX = re.compile(r"^---\s*\n(.*?)\n---\s*\n(.*)", re.DOTALL)
+
 
 def extract_metadata_and_content(text: str):
     """
@@ -22,6 +22,7 @@ def extract_metadata_and_content(text: str):
 
     return {}, text
 
+
 def process_document(doc):
     """
     Handles metadata extraction and content cleaning for a single document object.
@@ -35,6 +36,6 @@ def process_document(doc):
     for k, v in metadata.items():
         if k != "url":
             new_metadata[k] = v
-            
+
     doc.metadata = new_metadata
     return doc

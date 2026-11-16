@@ -8,10 +8,11 @@ from langgraph.graph.state import CompiledStateGraph
 
 from agents.lazy_agent import LazyLoadingAgent
 from agents.middlewares import ConfigurableModelMiddleware
-from core import get_model, settings
 from agents.prompts.open_source import SYSTEM_PROMPT
+from core import get_model, settings
 
 logger = logging.getLogger(__name__)
+
 
 class OpenSourceAgent(LazyLoadingAgent):
     """GitHub MCP Agent with async initialization for portfolio assistant."""
@@ -46,7 +47,7 @@ class OpenSourceAgent(LazyLoadingAgent):
 
             self._mcp_client = MultiServerMCPClient(connections)
             logger.info("MCP client initialized successfully")
-            
+
             self._mcp_tools = await self._mcp_client.get_tools()
         except Exception as e:
             logger.error(f"Failed to initialize GitHub MCP agent: {e}")

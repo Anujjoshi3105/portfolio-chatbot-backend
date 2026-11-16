@@ -16,6 +16,7 @@ def get_checkpointer(request: Request) -> Any:
         return checkpointer
     try:
         from agents import DEFAULT_AGENT, get_agent
+
         agent = get_agent(DEFAULT_AGENT)
         checkpointer = getattr(agent, "checkpointer", None)
         if checkpointer is not None:
@@ -28,11 +29,7 @@ def get_checkpointer(request: Request) -> Any:
 def verify_bearer(
     http_auth: Annotated[
         HTTPAuthorizationCredentials | None,
-        Depends(
-            HTTPBearer(
-                description="Please provide AUTH_SECRET api key", auto_error=False
-            )
-        ),
+        Depends(HTTPBearer(description="Please provide AUTH_SECRET api key", auto_error=False)),
     ],
 ) -> None:
     if not settings.AUTH_SECRET:

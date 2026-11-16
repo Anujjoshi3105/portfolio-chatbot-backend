@@ -1,21 +1,24 @@
 import json
+
+from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
-from langchain_core.documents import Document
-from langchain_core.tools import BaseTool, tool
+from core.utils import convert_tool_response_to_toon
 from memory.postgres import load_pgvector_retriever
-from service.utils import convert_tool_response_to_toon
 
 
 class DatabaseSearchInput(BaseModel):
     """Input for database search."""
-    query: str = Field(description="The natural language search query to look up information from Anuj's portfolio.")
+
+    query: str = Field(
+        description="The natural language search query to look up information from Anuj's portfolio."
+    )
 
 
 @tool("Database_Search", args_schema=DatabaseSearchInput)
 def database_search(query: str) -> str:
     """Search for relevant information about Anuj Joshi's education, experience, projects, blog posts, testimonials, and skills.
-    
+
     This tool should be used whenever the user asks about Anuj's background, work, or specific accomplishments.
     """
 

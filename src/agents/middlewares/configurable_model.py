@@ -1,6 +1,7 @@
 """Middleware that resolves the LLM model from runtime config."""
 
-from langchain.agents.middleware.types import AgentMiddleware, ModelRequest, ModelCallResult
+from langchain.agents.middleware.types import AgentMiddleware, ModelCallResult, ModelRequest
+from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.config import get_config
 
 from core import get_model, settings
@@ -11,7 +12,7 @@ class ConfigurableModelMiddleware(AgentMiddleware):
 
     tools: list = []  # type: ignore[assignment]
 
-    def _resolve_model(self) -> "BaseChatModel":
+    def _resolve_model(self) -> BaseChatModel:
         config = get_config()
         model_key = config.get("configurable", {}).get("model", settings.DEFAULT_MODEL)
         return get_model(model_key)

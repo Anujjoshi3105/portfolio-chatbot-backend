@@ -66,7 +66,7 @@ class UserInput(BaseModel):
     )
     agent_config: dict[str, Any] = Field(
         description="Additional configuration to pass through to the agent",
-        default={},
+        default_factory=dict,
         examples=[{"spicy_level": 0.8}],
     )
 
@@ -105,7 +105,7 @@ class ChatMessage(BaseModel):
     )
     tool_calls: list[ToolCall] = Field(
         description="Tool calls in the message.",
-        default=[],
+        default_factory=list,
     )
     tool_call_id: str | None = Field(
         description="Tool call that this message is responding to.",
@@ -123,11 +123,11 @@ class ChatMessage(BaseModel):
     )
     response_metadata: dict[str, Any] = Field(
         description="Response metadata. For example: response headers, logprobs, token counts.",
-        default={},
+        default_factory=dict,
     )
     custom_data: dict[str, Any] = Field(
         description="Custom message data.",
-        default={},
+        default_factory=dict,
     )
 
     def pretty_repr(self) -> str:
@@ -161,7 +161,7 @@ class Feedback(BaseModel):  # type: ignore[no-redef]
     )
     kwargs: dict[str, Any] = Field(
         description="Additional feedback kwargs, passed to LangSmith.",
-        default={},
+        default_factory=dict,
         examples=[{"comment": "In-line human feedback"}],
     )
 
@@ -188,7 +188,8 @@ class ChatMessagePreview(BaseModel):
 class ChatHistoryInput(BaseModel):
     """Input for retrieving chat history."""
 
-    user_id: str = Field(
+    user_id: str | None = Field(
+        default=None,
         description="User ID to scope history to the current user.",
         examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
     )
@@ -239,9 +240,17 @@ class ThreadSummary(BaseModel):
     """Summary of a conversation thread for listing."""
 
     thread_id: str = Field(description="Thread ID (logical id, without user prefix).")
+    agent_id: str | None = Field(
+        default=None,
+        description="Agent this thread was run with.",
+    )
     updated_at: str | None = Field(
         default=None,
         description="ISO 8601 timestamp of last update.",
+    )
+    title: str | None = Field(
+        default=None,
+        description="Title for the thread, derived from the first human message.",
     )
     preview: str | None = Field(
         default=None,
@@ -258,7 +267,9 @@ class ThreadListInput(BaseModel):
     )
     limit: int = Field(default=20, ge=1, le=100, description="Max number of threads to return.")
     offset: int = Field(default=0, ge=0, description="Number of threads to skip.")
-    search: str | None = Field(default=None, description="Filter threads by thread_id or preview (case-insensitive).")
+    search: str | None = Field(
+        default=None, description="Filter threads by thread_id or preview (case-insensitive)."
+    )
 
 
 class ThreadList(BaseModel):
@@ -266,3 +277,24 @@ class ThreadList(BaseModel):
 
     threads: list[ThreadSummary] = Field(default_factory=list)
     total: int | None = Field(default=None, description="Total matching threads before pagination.")
+
+
+class UserThreadsInput(BaseModel):
+    """Input for listing a user's conversation threads."""
+
+    user_id: str = Field(
+        description="User ID to list threads for.",
+        examples=["847c6285-8fc9-4560-a83f-4e6285809254"],
+    )
+    limit: int = Field(
+        description="Maximum number of threads to return.",
+        default=20,
+        ge=1,
+        le=100,
+    )
+
+
+class UserThreads(BaseModel):
+    """List of threads for a user."""
+
+    threads: list[ThreadSummary]

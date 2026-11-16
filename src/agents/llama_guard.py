@@ -1,4 +1,3 @@
-from schema.models import NvidiaModelName
 from enum import Enum
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
@@ -6,7 +5,7 @@ from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 
 from core import get_model, settings
-from schema.models import GroqModelName
+from schema.models import NvidiaModelName
 
 
 class SafetyAssessment(Enum):
@@ -29,7 +28,7 @@ unsafe_content_categories = {
     "S4": "Child Exploitation.",
     "S5": "Defamation.",
     "S6": "Specialized Advice.",
-#    "S7": "Privacy.",
+    #    "S7": "Privacy.",
     "S8": "Intellectual Property.",
     "S9": "Indiscriminate Weapons.",
     "S10": "Hate.",
@@ -82,7 +81,9 @@ class LlamaGuard:
             print("NVIDIA_API_KEY not set, skipping LlamaGuard")
             self.model = None
             return
-        self.model = get_model(NvidiaModelName.META_LLAMA_GUARD_4_12B).with_config(tags=["skip_stream"])
+        self.model = get_model(NvidiaModelName.META_LLAMA_GUARD_4_12B).with_config(
+            tags=["skip_stream"]
+        )
         self.prompt = PromptTemplate.from_template(llama_guard_instructions)
 
     def _compile_prompt(self, role: str, messages: list[AnyMessage]) -> str:

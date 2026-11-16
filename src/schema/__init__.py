@@ -14,6 +14,8 @@ from schema.schema import (
     ThreadListInput,
     ThreadSummary,
     UserInput,
+    UserThreads,
+    UserThreadsInput,
 )
 
 __all__ = [
@@ -32,4 +34,6 @@ __all__ = [
     "ThreadSummary",
     "ThreadListInput",
     "ThreadList",
+    "UserThreads",
+    "UserThreadsInput",
 ]

@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response, StreamingResponse
 
 from agents import DEFAULT_AGENT, get_all_agent_info
 from core import settings
@@ -19,9 +19,40 @@ from schema import (
 )
 from service import agent_service, history_service
 from service.dependencies import get_checkpointer, verify_bearer
-
+from voice.manager import VoiceManager
 
 router = APIRouter(dependencies=[Depends(verify_bearer)])
+
+
+@router.post("/voice/transcribe")
+async def transcribe_voice(audio: UploadFile = File(...)) -> dict[str, str]:
+    """Transcribe an uploaded audio file using the configured STT provider."""
+    if audio.content_type and not audio.content_type.startswith("audio/"):
+        raise HTTPException(status_code=415, detail="An audio upload is required")
+    current_position = audio.file.tell()
+    audio.file.seek(0, 2)
+    size = audio.file.tell()
+    audio.file.seek(current_position)
+    if size > settings.VOICE_MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413, detail="Audio upload exceeds the configured size limit"
+        )
+    try:
+        manager = VoiceManager.from_settings()
+        return {"text": manager.transcribe(audio.file)}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/voice/synthesize")
+async def synthesize_voice(text: str = Query(..., min_length=1, max_length=4096)) -> Response:
+    """Synthesize text using the configured TTS provider."""
+    try:
+        manager = VoiceManager.from_settings()
+        audio, media_type = manager.synthesize(text)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return Response(content=audio, media_type=media_type)
 
 
 def _sse_response_example() -> dict[int | str, Any]:
@@ -52,9 +83,7 @@ async def info() -> ServiceMetadata:
 
 @router.post("/{agent_id}/invoke", operation_id="invoke_with_agent_id")
 @router.post("/invoke")
-async def invoke(
-    user_input: UserInput, agent_id: str = DEFAULT_AGENT
-) -> ChatMessage:
+async def invoke(user_input: UserInput, agent_id: str = DEFAULT_AGENT) -> ChatMessage:
     """
     Invoke an agent with user input to retrieve a final response.
 
@@ -72,12 +101,8 @@ async def invoke(
     responses=_sse_response_example(),
     operation_id="stream_with_agent_id",
 )
-@router.post(
-    "/stream", response_class=StreamingResponse, responses=_sse_response_example()
-)
-async def stream(
-    user_input: StreamInput, agent_id: str = DEFAULT_AGENT
-) -> StreamingResponse:
+@router.post("/stream", response_class=StreamingResponse, responses=_sse_response_example())
+async def stream(user_input: StreamInput, agent_id: str = DEFAULT_AGENT) -> StreamingResponse:
     """
     Stream an agent's response to a user input, including intermediate messages and tokens.
 
@@ -112,7 +137,9 @@ async def history_get(
     thread_id: str = Query(..., description="Thread ID for the conversation."),
     limit: int = Query(50, ge=1, le=200, description="Max messages per page."),
     cursor: str | None = Query(None, description="Pagination cursor (older messages)."),
-    view: Literal["full", "preview"] = Query("full", description="full or preview (minimal fields)."),
+    view: Literal["full", "preview"] = Query(
+        "full", description="full or preview (minimal fields)."
+    ),
     checkpointer: Any = Depends(get_checkpointer),
 ) -> ChatHistoryResponse:
     """

@@ -1,4 +1,3 @@
-
 PORTFOLIO_URL = "https://anujjoshi.netlify.app"
 OWNER = "Anuj Joshi"
 

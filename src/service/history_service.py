@@ -4,8 +4,8 @@ Single responsibility; no agent dependency. Supports cursor pagination,
 selective view (preview/full), and TTL cache.
 """
 
+import asyncio
 import logging
-import threading
 import time
 from typing import Any
 
@@ -28,7 +28,7 @@ HISTORY_CACHE_TTL = 60
 
 # In-memory cache: (user_id, thread_id) -> (list[AnyMessage], expiry_ts)
 _history_cache: dict[tuple[str, str], tuple[list[AnyMessage], float]] = {}
-_cache_lock = threading.Lock()
+_cache_lock = asyncio.Lock()
 
 
 def _checkpoint_thread_id(user_id: str, thread_id: str) -> str:
@@ -46,10 +46,18 @@ def _raw_messages_from_checkpoint(tuple_result: Any) -> list[AnyMessage]:
         return []
     checkpoint = tuple_result.checkpoint
     # Checkpoint is a dict subclass in LangGraph
-    channel_values = checkpoint.get("channel_values", {}) if isinstance(checkpoint, dict) else getattr(checkpoint, "channel_values", {})
+    channel_values = (
+        checkpoint.get("channel_values", {})
+        if isinstance(checkpoint, dict)
+        else getattr(checkpoint, "channel_values", {})
+    )
     if not channel_values:
         return []
-    raw = channel_values.get("messages", []) if isinstance(channel_values, dict) else getattr(channel_values, "get", lambda k, default=None: default)("messages") or []
+    raw = (
+        channel_values.get("messages", [])
+        if isinstance(channel_values, dict)
+        else getattr(channel_values, "get", lambda k, default=None: default)("messages") or []
+    )
     if not raw:
         return []
     raw = list(raw)
@@ -60,10 +68,10 @@ def _raw_messages_from_checkpoint(tuple_result: Any) -> list[AnyMessage]:
     return list(raw)
 
 
-def _get_cached_messages(user_id: str, thread_id: str) -> list[AnyMessage] | None:
+async def _get_cached_messages(user_id: str, thread_id: str) -> list[AnyMessage] | None:
     """Return cached message list if present and not expired."""
     key = (user_id.strip(), thread_id.strip())
-    with _cache_lock:
+    async with _cache_lock:
         entry = _history_cache.get(key)
         if not entry:
             return None
@@ -74,18 +82,18 @@ def _get_cached_messages(user_id: str, thread_id: str) -> list[AnyMessage] | Non
         return messages
 
 
-def _set_cached_messages(user_id: str, thread_id: str, messages: list[AnyMessage]) -> None:
+async def _set_cached_messages(user_id: str, thread_id: str, messages: list[AnyMessage]) -> None:
     """Store message list in cache with TTL."""
     key = (user_id.strip(), thread_id.strip())
     expiry = time.monotonic() + HISTORY_CACHE_TTL
-    with _cache_lock:
+    async with _cache_lock:
         _history_cache[key] = (messages, expiry)
 
 
-def invalidate_history(user_id: str, thread_id: str) -> None:
+async def invalidate_history(user_id: str, thread_id: str) -> None:
     """Invalidate cache for this thread (call after writing to the thread)."""
     key = (user_id or "").strip(), (thread_id or "").strip()
-    with _cache_lock:
+    async with _cache_lock:
         _history_cache.pop(key, None)
 
 
@@ -107,7 +115,7 @@ async def get_history(checkpointer: Any, input: ChatHistoryInput) -> ChatHistory
         return ChatHistoryResponse(messages=[], next_cursor=None, prev_cursor=None)
 
     # Try cache first
-    messages = _get_cached_messages(user_id, thread_id)
+    messages = await _get_cached_messages(user_id, thread_id)
     if messages is None:
         checkpoint_thread_id = _checkpoint_thread_id(user_id, thread_id)
         config = RunnableConfig(
@@ -121,7 +129,7 @@ async def get_history(checkpointer: Any, input: ChatHistoryInput) -> ChatHistory
                     "History: no messages for thread_id=%s (checkpoint missing or empty)",
                     checkpoint_thread_id,
                 )
-            _set_cached_messages(user_id, thread_id, messages)
+            await _set_cached_messages(user_id, thread_id, messages)
         except Exception as e:
             logger.error("Chat history error: %s", e)
             raise HTTPException(

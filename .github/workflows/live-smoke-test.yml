@@ -1,0 +1,72 @@
+name: Live smoke test
+
+# Weekly round-trip against the deployed backend: calls /info and /health,
+# verifies the service is reachable and responding. Runs an hour before the
+# Sunday sync run so that run has a fresh result to report.
+on:
+  schedule:
+    - cron: "0 9 * * 0"
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Target backend URL to smoke test (leave blank to use the script default)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-smoke-test
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    # Only run against the maintainer's deployed app, not in template clones/forks
+    if: github.repository == 'Anujjoshi3105/portfolio-chatbot-backend'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: "pyproject.toml"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.13.5"
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --only-group dev
+        env:
+          UV_SYSTEM_PYTHON: 1
+      - name: Run live smoke test
+        env:
+          LIVE_APP_URL: ${{ github.event.inputs.url }}
+        run: |
+          if [ -z "${LIVE_APP_URL}" ]; then unset LIVE_APP_URL; fi
+          set -o pipefail
+          uv run python scripts/smoke_live_app.py 2>&1 | tee smoke_run.log
+      - name: Failure summary
+        if: failure()
+        run: |
+          {
+            echo "## ❌ Live smoke test failed"
+            echo ""
+            echo "Target: \`${LIVE_APP_URL:-script default}\`"
+            echo ""
+            echo "Diagnostics:"
+            echo '```'
+            diag=$(grep '\[smoke_live_app\]' smoke_run.log 2>/dev/null | tail -n 40)
+            echo "${diag:-(no diagnostic lines captured)}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload failure log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-live-app-failure
+          path: smoke_run.log
+          if-no-files-found: warn
