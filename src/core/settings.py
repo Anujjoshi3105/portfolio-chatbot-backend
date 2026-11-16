@@ -1,3 +1,5 @@
+import logging
+import urllib.request
 from enum import StrEnum
 from json import loads
 from typing import Annotated, Any
@@ -15,7 +17,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from schema.models import (
     AllEmbeddingModelEnum,
-    AllModelEnum,
     AnthropicModelName,
     AWSModelName,
     AzureOpenAIModelName,
@@ -35,6 +36,8 @@ from schema.models import (
     Provider,
     VertexAIModelName,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseType(StrEnum):
@@ -67,6 +70,77 @@ class LogLevel(StrEnum):
 def check_str_is_http(x: str) -> str:
     http_url_adapter = TypeAdapter(HttpUrl)
     return str(http_url_adapter.validate_python(x))
+
+
+def _fetch_json_get(url: str, api_key: str | None, timeout: float = 15.0) -> list[str]:
+    """GET a JSON endpoint and return ``data[].id`` (OpenAI-style list) or ``models[].name`` (Ollama)."""
+    if not api_key:
+        return []
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            data = loads(response.read().decode("utf-8"))
+    except Exception:
+        return []
+    items = data.get("data") or data.get("models") or []
+    ids: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        mid = item.get("id") or item.get("name")
+        if mid:
+            ids.append(str(mid))
+    return ids
+
+
+def _fetch_ollama_models(base_url: str | None) -> list[str]:
+    if not base_url:
+        return []
+    url = base_url.rstrip("/") + "/api/tags"
+    try:
+        req = urllib.request.Request(url, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=15.0) as response:
+            data = loads(response.read().decode("utf-8"))
+    except Exception:
+        return []
+    ids: list[str] = []
+    for item in data.get("models", []) or []:
+        if isinstance(item, dict) and item.get("name"):
+            ids.append(str(item["name"]))
+    return ids
+
+
+def _fetch_live_models(provider: Provider, api_key: str | None, base_url: str | None) -> list[str]:
+    """Return live model ids for a provider, or an empty list if the API is unreachable."""
+    match provider:
+        case Provider.OPENAI:
+            return _fetch_json_get("https://api.openai.com/v1/models", api_key)
+        case Provider.DEEPSEEK:
+            return _fetch_json_get("https://api.deepseek.com/v1/models", api_key)
+        case Provider.GROQ:
+            return _fetch_json_get("https://api.groq.com/openai/v1/models", api_key)
+        case Provider.OPENROUTER:
+            return _fetch_json_get("https://openrouter.ai/api/v1/models", api_key)
+        case Provider.NVIDIA:
+            return _fetch_json_get("https://integrate.api.nvidia.com/v1/models", api_key)
+        case Provider.OLLAMA:
+            return _fetch_ollama_models(base_url)
+        case (
+            Provider.ANTHROPIC
+            | Provider.GOOGLE
+            | Provider.VERTEXAI
+            | Provider.AWS
+            | Provider.AZURE_OPENAI
+            | Provider.OPENAI_COMPATIBLE
+            | Provider.FAKE
+        ):
+            # No public model-list endpoint; rely on the bundled enum instead.
+            return []
+        case _:
+            return []
 
 
 class Settings(BaseSettings):
@@ -107,8 +181,10 @@ class Settings(BaseSettings):
     NVIDIA_API_KEY: SecretStr | None = None
 
     # If DEFAULT_MODEL is None, it will be set in model_post_init
-    DEFAULT_MODEL: AllModelEnum | None = None  # type: ignore[assignment]
-    AVAILABLE_MODELS: set[AllModelEnum] = set()  # type: ignore[assignment]
+    DEFAULT_MODEL: str | None = None  # type: ignore[assignment]
+    AVAILABLE_MODELS: set[str] = set()  # type: ignore[assignment]
+    # model id -> provider, used by core/llm.py to route instantiation
+    MODEL_PROVIDER_MAP: dict[str, Provider] = Field(default_factory=dict)
 
     # Embedding Settings
     DEFAULT_EMBEDDING_MODEL: AllEmbeddingModelEnum | None = None  # type: ignore[assignment]
@@ -203,84 +279,104 @@ class Settings(BaseSettings):
         if not active_keys:
             raise ValueError("At least one LLM API key must be provided.")
 
+        # Bundled enum fallback values per provider (value, default)
+        _BUNDLED: dict[Provider, tuple[list[str], str]] = {
+            Provider.OPENAI: (
+                [m.value for m in OpenAIModelName],
+                OpenAIModelName.GPT_5_NANO.value,
+            ),
+            Provider.OPENAI_COMPATIBLE: (
+                [m.value for m in OpenAICompatibleName],
+                OpenAICompatibleName.OPENAI_COMPATIBLE.value,
+            ),
+            Provider.DEEPSEEK: (
+                [m.value for m in DeepseekModelName],
+                DeepseekModelName.DEEPSEEK_CHAT.value,
+            ),
+            Provider.ANTHROPIC: (
+                [m.value for m in AnthropicModelName],
+                AnthropicModelName.HAIKU_45.value,
+            ),
+            Provider.GOOGLE: (
+                [m.value for m in GoogleModelName],
+                GoogleModelName.GEMINI_20_FLASH.value,
+            ),
+            Provider.VERTEXAI: (
+                [m.value for m in VertexAIModelName],
+                VertexAIModelName.GEMINI_20_FLASH.value,
+            ),
+            Provider.NVIDIA: (
+                [m.value for m in NvidiaModelName],
+                NvidiaModelName.NVIDIA_LLAMA_3_1_NEMOTRON_70B_INSTRUCT.value,
+            ),
+            Provider.GROQ: (
+                [m.value for m in GroqModelName],
+                GroqModelName.GROQ_COMPOUND_MINI.value,
+            ),
+            Provider.AWS: (
+                [m.value for m in AWSModelName],
+                AWSModelName.BEDROCK_HAIKU.value,
+            ),
+            Provider.OLLAMA: (
+                [m.value for m in OllamaModelName],
+                OllamaModelName.OLLAMA_GENERIC.value,
+            ),
+            Provider.OPENROUTER: (
+                [m.value for m in OpenRouterModelName],
+                OpenRouterModelName.GEMINI_25_FLASH.value,
+            ),
+            Provider.FAKE: (
+                [m.value for m in FakeModelName],
+                FakeModelName.FAKE.value,
+            ),
+            Provider.AZURE_OPENAI: (
+                [m.value for m in AzureOpenAIModelName],
+                AzureOpenAIModelName.AZURE_GPT_4O_MINI.value,
+            ),
+        }
+
         for provider in active_keys:
-            match provider:
-                case Provider.OPENAI:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = OpenAIModelName.GPT_5_NANO
-                    self.AVAILABLE_MODELS.update(set(OpenAIModelName))
-                case Provider.OPENAI_COMPATIBLE:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = OpenAICompatibleName.OPENAI_COMPATIBLE
-                    self.AVAILABLE_MODELS.update(set(OpenAICompatibleName))
-                case Provider.DEEPSEEK:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = DeepseekModelName.DEEPSEEK_CHAT
-                    self.AVAILABLE_MODELS.update(set(DeepseekModelName))
-                case Provider.ANTHROPIC:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = AnthropicModelName.HAIKU_45
-                    self.AVAILABLE_MODELS.update(set(AnthropicModelName))
-                case Provider.GOOGLE:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = GoogleModelName.GEMINI_20_FLASH
-                    self.AVAILABLE_MODELS.update(set(GoogleModelName))
-                case Provider.VERTEXAI:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = VertexAIModelName.GEMINI_20_FLASH
-                    self.AVAILABLE_MODELS.update(set(VertexAIModelName))
-                case Provider.NVIDIA:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = NvidiaModelName.LLAMA_31_NEMOTRON_70B_INSTRUCT
-                    self.AVAILABLE_MODELS.update(set(NvidiaModelName))
-                case Provider.GROQ:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = GroqModelName.LLAMA_31_8B_INSTANT
-                    self.AVAILABLE_MODELS.update(set(GroqModelName))
-                case Provider.AWS:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = AWSModelName.BEDROCK_HAIKU
-                    self.AVAILABLE_MODELS.update(set(AWSModelName))
-                case Provider.OLLAMA:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = OllamaModelName.OLLAMA_GENERIC
-                    self.AVAILABLE_MODELS.update(set(OllamaModelName))
-                case Provider.OPENROUTER:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = OpenRouterModelName.GEMINI_25_FLASH
-                    self.AVAILABLE_MODELS.update(set(OpenRouterModelName))
-                case Provider.FAKE:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = FakeModelName.FAKE
-                    self.AVAILABLE_MODELS.update(set(FakeModelName))
-                case Provider.AZURE_OPENAI:
-                    if self.DEFAULT_MODEL is None:
-                        self.DEFAULT_MODEL = AzureOpenAIModelName.AZURE_GPT_4O_MINI
-                    self.AVAILABLE_MODELS.update(set(AzureOpenAIModelName))
-                    # Validate Azure OpenAI settings if Azure provider is available
-                    if not self.AZURE_OPENAI_API_KEY:
-                        raise ValueError("AZURE_OPENAI_API_KEY must be set")
-                    if not self.AZURE_OPENAI_ENDPOINT:
-                        raise ValueError("AZURE_OPENAI_ENDPOINT must be set")
-                    if not self.AZURE_OPENAI_DEPLOYMENT_MAP:
-                        raise ValueError("AZURE_OPENAI_DEPLOYMENT_MAP must be set")
+            bundled_models, bundled_default = _BUNDLED[provider]
+            api_key = api_keys[provider]
+            # Resolve the api_key/secret to a raw string for live fetching.
+            key_str = (
+                api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
+            )
+            base_url = (
+                settings.COMPATIBLE_BASE_URL
+                if provider == Provider.OPENAI_COMPATIBLE
+                else settings.OLLAMA_BASE_URL
+            )
 
-                    # Parse deployment map if it's a string
-                    if isinstance(self.AZURE_OPENAI_DEPLOYMENT_MAP, str):
-                        try:
-                            self.AZURE_OPENAI_DEPLOYMENT_MAP = loads(
-                                self.AZURE_OPENAI_DEPLOYMENT_MAP
-                            )
-                        except Exception as e:
-                            raise ValueError(f"Invalid AZURE_OPENAI_DEPLOYMENT_MAP JSON: {e}")
+            live_models = _fetch_live_models(provider, key_str, base_url)
+            models = live_models if live_models else bundled_models
+            source = "live API" if live_models else "bundled enum"
 
-                    # Validate required deployments exist
-                    required_models = {"gpt-4o", "gpt-4o-mini"}
-                    missing_models = required_models - set(self.AZURE_OPENAI_DEPLOYMENT_MAP.keys())
-                    if missing_models:
-                        raise ValueError(f"Missing required Azure deployments: {missing_models}")
-                case _:
-                    raise ValueError(f"Unknown provider: {provider}")
+            self.AVAILABLE_MODELS.update(models)
+            for mid in models:
+                self.MODEL_PROVIDER_MAP[mid] = provider
+
+            if self.DEFAULT_MODEL is None:
+                self.DEFAULT_MODEL = models[0]
+                logger.info(f"Default model for {provider} set to {self.DEFAULT_MODEL} ({source})")
+
+        # Azure OpenAI requires explicit deployment configuration (no public model list).
+        if Provider.AZURE_OPENAI in active_keys:
+            if not self.AZURE_OPENAI_API_KEY:
+                raise ValueError("AZURE_OPENAI_API_KEY must be set")
+            if not self.AZURE_OPENAI_ENDPOINT:
+                raise ValueError("AZURE_OPENAI_ENDPOINT must be set")
+            if not self.AZURE_OPENAI_DEPLOYMENT_MAP:
+                raise ValueError("AZURE_OPENAI_DEPLOYMENT_MAP must be set")
+            if isinstance(self.AZURE_OPENAI_DEPLOYMENT_MAP, str):
+                try:
+                    self.AZURE_OPENAI_DEPLOYMENT_MAP = loads(self.AZURE_OPENAI_DEPLOYMENT_MAP)
+                except Exception as e:
+                    raise ValueError(f"Invalid AZURE_OPENAI_DEPLOYMENT_MAP JSON: {e}")
+            required_models = {"gpt-4o", "gpt-4o-mini"}
+            missing_models = required_models - set(self.AZURE_OPENAI_DEPLOYMENT_MAP.keys())
+            if missing_models:
+                raise ValueError(f"Missing required Azure deployments: {missing_models}")
 
         for provider in active_keys:
             match provider:

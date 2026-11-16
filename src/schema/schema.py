@@ -1,9 +1,9 @@
 from typing import Any, Literal, NotRequired
 
-from pydantic import BaseModel, Field, SerializeAsAny
+from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
-from schema.models import AllModelEnum, AnthropicModelName, OpenAIModelName
+from schema.models import AnthropicModelName, OpenAIModelName
 
 
 class AgentInfo(BaseModel):
@@ -29,14 +29,14 @@ class ServiceMetadata(BaseModel):
     agents: list[AgentInfo] = Field(
         description="List of available agents.",
     )
-    models: list[AllModelEnum] = Field(
+    models: list[str] = Field(
         description="List of available LLMs.",
     )
     default_agent: str = Field(
         description="Default agent used when none is specified.",
         examples=["research-assistant"],
     )
-    default_model: AllModelEnum = Field(
+    default_model: str = Field(
         description="Default model used when none is specified.",
     )
 
@@ -48,7 +48,7 @@ class UserInput(BaseModel):
         description="User input to the agent.",
         examples=["What is the weather in Tokyo?"],
     )
-    model: SerializeAsAny[AllModelEnum] | None = Field(
+    model: str | None = Field(
         title="Model",
         description="LLM Model to use for the agent. Defaults to the default model set in the settings of the service.",
         default=None,

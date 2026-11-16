@@ -11,9 +11,8 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_ollama import ChatOllama
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
-from core.settings import settings
+from core.settings import Provider, settings
 from schema.models import (
-    AllModelEnum,
     AnthropicModelName,
     AWSModelName,
     AzureOpenAIModelName,
@@ -29,21 +28,21 @@ from schema.models import (
     VertexAIModelName,
 )
 
-_MODEL_TABLE = (
-    {m: m.value for m in OpenAIModelName}
-    | {m: m.value for m in OpenAICompatibleName}
-    | {m: m.value for m in AzureOpenAIModelName}
-    | {m: m.value for m in DeepseekModelName}
-    | {m: m.value for m in AnthropicModelName}
-    | {m: m.value for m in GoogleModelName}
-    | {m: m.value for m in VertexAIModelName}
-    | {m: m.value for m in GroqModelName}
-    | {m: m.value for m in AWSModelName}
-    | {m: m.value for m in OllamaModelName}
-    | {m: m.value for m in OpenRouterModelName}
-    | {m: m.value for m in NvidiaModelName}
-    | {m: m.value for m in FakeModelName}
-)
+_MODELS_BY_PROVIDER: dict[Provider, tuple] = {
+    Provider.OPENAI: OpenAIModelName,
+    Provider.OPENAI_COMPATIBLE: OpenAICompatibleName,
+    Provider.AZURE_OPENAI: AzureOpenAIModelName,
+    Provider.DEEPSEEK: DeepseekModelName,
+    Provider.ANTHROPIC: AnthropicModelName,
+    Provider.GOOGLE: GoogleModelName,
+    Provider.VERTEXAI: VertexAIModelName,
+    Provider.NVIDIA: NvidiaModelName,
+    Provider.GROQ: GroqModelName,
+    Provider.AWS: AWSModelName,
+    Provider.OLLAMA: OllamaModelName,
+    Provider.OPENROUTER: OpenRouterModelName,
+    Provider.FAKE: FakeModelName,
+}
 
 
 class FakeToolModel(FakeListChatModel):
@@ -69,19 +68,21 @@ ModelT: TypeAlias = (
 
 
 @cache
-def get_model(model_name: AllModelEnum, /) -> ModelT:
+def get_model(model_name: str, /) -> ModelT:
     # NOTE: models with streaming=True will send tokens as they are generated
     # if the /stream endpoint is called with stream_tokens=True (the default)
-    api_model_name = _MODEL_TABLE.get(model_name)
-    if not api_model_name:
+    provider = settings.MODEL_PROVIDER_MAP.get(model_name)
+    if provider is None:
         raise ValueError(f"Unsupported model: {model_name}")
+    return _build_model(provider, model_name)
 
-    if model_name in OpenAIModelName:
-        return ChatOpenAI(model=api_model_name, streaming=True)
-    if model_name in OpenAICompatibleName:
+
+def _build_model(provider: Provider, model_name: str) -> ModelT:
+    if provider == Provider.OPENAI:
+        return ChatOpenAI(model=model_name, streaming=True)
+    if provider == Provider.OPENAI_COMPATIBLE:
         if not settings.COMPATIBLE_BASE_URL or not settings.COMPATIBLE_MODEL:
             raise ValueError("OpenAICompatible base url and endpoint must be configured")
-
         return ChatOpenAI(
             model=settings.COMPATIBLE_MODEL,
             temperature=0.5,
@@ -89,60 +90,55 @@ def get_model(model_name: AllModelEnum, /) -> ModelT:
             openai_api_base=settings.COMPATIBLE_BASE_URL,
             openai_api_key=settings.COMPATIBLE_API_KEY,
         )
-    if model_name in AzureOpenAIModelName:
+    if provider == Provider.AZURE_OPENAI:
         if not settings.AZURE_OPENAI_API_KEY or not settings.AZURE_OPENAI_ENDPOINT:
             raise ValueError("Azure OpenAI API key and endpoint must be configured")
-
         return AzureChatOpenAI(
             azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-            deployment_name=api_model_name,
+            deployment_name=model_name,
             api_version=settings.AZURE_OPENAI_API_VERSION,
             temperature=0.5,
             streaming=True,
             timeout=60,
             max_retries=3,
         )
-    if model_name in DeepseekModelName:
+    if provider == Provider.DEEPSEEK:
         return ChatOpenAI(
-            model=api_model_name,
+            model=model_name,
             temperature=0.5,
             streaming=True,
             openai_api_base="https://api.deepseek.com",
             openai_api_key=settings.DEEPSEEK_API_KEY,
         )
-    if model_name in AnthropicModelName:
-        return ChatAnthropic(model=api_model_name, temperature=0.5, streaming=True)
-    if model_name in GoogleModelName:
-        return ChatGoogleGenerativeAI(model=api_model_name, temperature=0.5, streaming=True)
-    if model_name in VertexAIModelName:
-        return ChatVertexAI(model=api_model_name, temperature=0.5, streaming=True)
-    if model_name in NvidiaModelName:
+    if provider == Provider.ANTHROPIC:
+        return ChatAnthropic(model=model_name, temperature=0.5, streaming=True)
+    if provider == Provider.GOOGLE:
+        return ChatGoogleGenerativeAI(model=model_name, temperature=0.5, streaming=True)
+    if provider == Provider.VERTEXAI:
+        return ChatVertexAI(model=model_name, temperature=0.5, streaming=True)
+    if provider == Provider.NVIDIA:
         return ChatNVIDIA(
-            model=api_model_name,
+            model=model_name,
             temperature=0.5,
             api_key=settings.NVIDIA_API_KEY,
         )
-    if model_name in GroqModelName:
-        return ChatGroq(model=api_model_name, temperature=0.5)  # type: ignore[call-arg]
-    if model_name in AWSModelName:
-        return ChatBedrock(model_id=api_model_name, temperature=0.5)
-    if model_name in OllamaModelName:
+    if provider == Provider.GROQ:
+        return ChatGroq(model=model_name, temperature=0.5)  # type: ignore[call-arg]
+    if provider == Provider.AWS:
+        return ChatBedrock(model_id=model_name, temperature=0.5)
+    if provider == Provider.OLLAMA:
         if settings.OLLAMA_BASE_URL:
-            chat_ollama = ChatOllama(
-                model=api_model_name, temperature=0.5, base_url=settings.OLLAMA_BASE_URL
-            )
-        else:
-            chat_ollama = ChatOllama(model=api_model_name, temperature=0.5)
-        return chat_ollama
-    if model_name in OpenRouterModelName:
+            return ChatOllama(model=model_name, temperature=0.5, base_url=settings.OLLAMA_BASE_URL)
+        return ChatOllama(model=model_name, temperature=0.5)
+    if provider == Provider.OPENROUTER:
         return ChatOpenAI(
-            model=api_model_name,
+            model=model_name,
             temperature=0.5,
             streaming=True,
             base_url="https://openrouter.ai/api/v1/",
             api_key=settings.OPENROUTER_API_KEY,
         )
-    if model_name in FakeModelName:
+    if provider == Provider.FAKE:
         return FakeToolModel(responses=["This is a test response from the fake model."])
 
     raise ValueError(f"Unsupported model: {model_name}")
