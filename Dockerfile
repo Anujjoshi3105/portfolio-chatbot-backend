@@ -41,6 +41,7 @@ COPY --chown=user:user src/memory/ ./memory/
 COPY --chown=user:user src/schema/ ./schema/
 COPY --chown=user:user src/service/ ./service/
 COPY --chown=user:user src/scripts/ ./scripts/
+COPY --chown=user:user src/voice/ ./voice/
 COPY --chown=user:user src/run_service.py ./run_service.py
 USER user
 

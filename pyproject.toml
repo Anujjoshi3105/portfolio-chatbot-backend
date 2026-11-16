@@ -119,3 +119,12 @@ plugins.md033.enabled = false
 plugins.md041.enabled = false
 # Allow repeated heading text as long as it's not adjacent siblings.
 plugins.md024.siblings_only = true
+# README uses atx headings throughout.
+plugins.md003.enabled = false
+# Blank lines around headings/lists not enforced for this doc style.
+plugins.md022.enabled = false
+plugins.md032.enabled = false
+# Fenced code blocks without a language are used intentionally.
+plugins.md040.enabled = false
+# Emphasis as heading is acceptable here.
+plugins.md036.enabled = false
