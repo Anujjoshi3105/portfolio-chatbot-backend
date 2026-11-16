@@ -1,0 +1,35 @@
+name: Set up Hugging Face Space
+
+on:
+  workflow_dispatch:
+    inputs:
+      space_name:
+        description: 'Hugging Face Space name'
+        required: true
+        default: 'chatbot-backend'
+
+jobs:
+  create_space:
+    name: Create/Update HF Space
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display inputs
+        run: echo "Space: ${{ inputs.space_name }}"
+
+      - name: Configure HF CLI
+        uses: huggingface/configure-hf-cli@v1
+
+      - name: Create Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          hf space create ${{ inputs.space_name }} --repo-type space --visibility private
+          echo "Space created: ${{ inputs.space_name }}"
+
+      - name: Add Secrets
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          hf secrets add NVIDIA_API_KEY --space ${{ inputs.space_name }}
+          echo "Secrets configured"
