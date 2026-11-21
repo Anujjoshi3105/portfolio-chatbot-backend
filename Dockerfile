@@ -30,19 +30,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip install --no-cache-dir uv
 
+# Create user before it's referenced in COPY --chown
+RUN useradd -m -u 1000 user
+
 WORKDIR /app
 
 # Copy installed dependencies from builder
 COPY --from=builder --chown=user:user /app/.venv ./.venv
 
 # Copy application code
-COPY app/ ./app/
+COPY --chown=user:user app/ ./app/
 
 # Create data directory for persistent storage
 RUN mkdir -p /data && chmod 777 /data
 
-# Set user
-RUN useradd -m -u 1000 user
 USER user
 
 EXPOSE 7860
