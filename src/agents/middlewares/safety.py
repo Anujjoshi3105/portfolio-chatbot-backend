@@ -29,7 +29,11 @@ class SafetyMiddleware:
     @property
     def enabled(self) -> bool:
         """Whether the safety guard is active."""
-        return settings.ENABLE_SAFETY_GUARD and self._guard.model is not None
+        return (
+            settings.ENABLE_SAFETY_GUARD
+            and self._guard is not None
+            and self._guard.model is not None
+        )
 
     async def check_input(self, messages: list[AnyMessage]) -> LlamaGuardOutput:
         """Check user input messages before forwarding to an agent."""

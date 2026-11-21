@@ -349,8 +349,12 @@ class Settings(BaseSettings):
             )
 
             live_models = _fetch_live_models(provider, key_str, base_url)
-            models = live_models if live_models else bundled_models
-            source = "live API" if live_models else "bundled enum"
+            models = (
+                list(dict.fromkeys(bundled_models + live_models))
+                if live_models
+                else bundled_models
+            )
+            source = "live API + bundled enum" if live_models else "bundled enum"
 
             self.AVAILABLE_MODELS.update(models)
             for mid in models:

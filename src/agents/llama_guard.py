@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
@@ -6,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from core import get_model, settings
 from schema.models import NvidiaModelName
+
+logger = logging.getLogger(__name__)
 
 
 class SafetyAssessment(Enum):
@@ -77,14 +80,31 @@ def parse_llama_guard_output(output: str) -> LlamaGuardOutput:
 
 class LlamaGuard:
     def __init__(self) -> None:
-        if settings.NVIDIA_API_KEY is None:
-            print("NVIDIA_API_KEY not set, skipping LlamaGuard")
+        if not settings.ENABLE_SAFETY_GUARD:
+            logger.info("Safety guard disabled via ENABLE_SAFETY_GUARD, skipping LlamaGuard")
             self.model = None
             return
-        self.model = get_model(NvidiaModelName.META_LLAMA_GUARD_4_12B).with_config(
-            tags=["skip_stream"]
+
+        api_key = (
+            settings.NVIDIA_API_KEY.get_secret_value()
+            if hasattr(settings.NVIDIA_API_KEY, "get_secret_value")
+            else settings.NVIDIA_API_KEY
         )
-        self.prompt = PromptTemplate.from_template(llama_guard_instructions)
+        if not api_key:
+            logger.info("NVIDIA_API_KEY not set or empty, skipping LlamaGuard")
+            self.model = None
+            return
+
+        try:
+            self.model = get_model(NvidiaModelName.META_LLAMA_GUARD_4_12B).with_config(
+                tags=["skip_stream"]
+            )
+            self.prompt = PromptTemplate.from_template(llama_guard_instructions)
+        except Exception as e:
+            logger.warning(
+                "Failed to initialize LlamaGuard model (%s). Safety guard will be disabled.", e
+            )
+            self.model = None
 
     def _compile_prompt(self, role: str, messages: list[AnyMessage]) -> str:
         role_mapping = {"ai": "Agent", "human": "User"}
