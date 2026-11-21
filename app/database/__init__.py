@@ -1,1 +1,0 @@
-# Database package - models are in app.database.models

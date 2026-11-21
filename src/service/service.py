@@ -106,9 +106,9 @@ app.add_middleware(
 )
 
 
-@app.get("/health", dependencies=[Depends(verify_bearer)])
+@app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint. Unauthenticated — used by chatui and load balancers as a liveness probe."""
 
     degraded_agents = getattr(app.state, "degraded_agents", {})
     health_status = {
@@ -131,6 +131,19 @@ async def health_check():
 async def healthz() -> dict[str, str]:
     """Unauthenticated liveness probe for load balancers."""
     return {"status": "ok"}
+
+
+@app.get("/info")
+async def info():
+    """Unauthenticated metadata endpoint for chatui."""
+    models = list(settings.AVAILABLE_MODELS)
+    models.sort()
+    return {
+        "agents": [a.model_dump() for a in get_all_agent_info()],
+        "models": models,
+        "default_agent": DEFAULT_AGENT,
+        "default_model": settings.DEFAULT_MODEL,
+    }
 
 
 app.include_router(router)

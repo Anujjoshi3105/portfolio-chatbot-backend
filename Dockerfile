@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM python:3.12-slim AS builder
+FROM python:3.12.3-slim AS builder
 
 ENV UV_COMPILE_BYTECODE=1
 
@@ -15,7 +15,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Stage 2: Runtime image
-FROM python:3.12-slim
+FROM python:3.12.3-slim
 
 ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -28,28 +28,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir uv
-
-# Create user before it's referenced in COPY --chown
-RUN useradd -m -u 1000 user
+RUN pip install --no-cache-dir uv \
+    && useradd -m -u 1000 user
 
 WORKDIR /app
+RUN chown user:user /app
 
-# Copy installed dependencies from builder
 COPY --from=builder --chown=user:user /app/.venv ./.venv
-
-# Copy application code
-COPY --chown=user:user app/ ./app/
-
-# Create data directory for persistent storage
-RUN mkdir -p /data && chmod 777 /data
-
+COPY --chown=user:user src/agents/ ./agents/
+COPY --chown=user:user src/core/ ./core/
+COPY --chown=user:user src/memory/ ./memory/
+COPY --chown=user:user src/schema/ ./schema/
+COPY --chown=user:user src/service/ ./service/
+COPY --chown=user:user src/scripts/ ./scripts/
+COPY --chown=user:user src/voice/ ./voice/
+COPY --chown=user:user src/run_service.py ./run_service.py
 USER user
 
 EXPOSE 7860
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:7860/api/v1/health || exit 1
-
-CMD ["uv", "run", "python", "-m", "app.main"]
+CMD ["uv", "run", "python", "run_service.py"]
