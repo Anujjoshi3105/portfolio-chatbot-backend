@@ -343,9 +343,9 @@ class Settings(BaseSettings):
                 api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
             )
             base_url = (
-                settings.COMPATIBLE_BASE_URL
+                self.COMPATIBLE_BASE_URL
                 if provider == Provider.OPENAI_COMPATIBLE
-                else settings.OLLAMA_BASE_URL
+                else self.OLLAMA_BASE_URL
             )
 
             live_models = _fetch_live_models(provider, key_str, base_url)
