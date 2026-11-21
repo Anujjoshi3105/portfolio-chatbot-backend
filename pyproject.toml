@@ -25,6 +25,7 @@ dependencies = [
     "aiofiles >=23.2.0",
     "python-dotenv >=1.0.0",
     "alembic >=1.13.0",
+    "aiosqlite >=0.20.0",
     "asyncpg >=0.29.0",  # for Postgres support
     "sqlalchemy-utils >=0.40.0",
     "langchain-nvidia-ai-endpoints >=1.0.4",

@@ -1,49 +1,23 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadQuery, Query
-from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Any, List, Optional
-
-from app.database.models import File, User
-from app.database.session import get_async_session
-from app.storage.base import get_storage_backend, StorageBackend
-from app.core.config import settings
-import uuid
 import os
+from pathlib import Path
+import tempfile
+from typing import Any, List, Optional
+import uuid
 
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File as FastAPIFile
+from fastapi.responses import FileResponse
+from sqlalchemy import func, select, delete as sq_delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.models import File as DBFile, User, Conversation, DocumentChunk, ConversationFile
+from app.database.session import get_async_session
+from app.core.security import get_current_user
+from app.storage import get_storage_backend, StorageBackend
+from app.core.config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["files"])
 
 storage: StorageBackend = get_storage_backend()
-
-
-async def get_current_user(
-    api_key: str = Query(..., description="API key for authentication"),
-    session: AsyncSession = Depends(get_async_session),
-) -> User:
-    """Dependency to get the current authenticated user."""
-    from app.database.models import APIKey
-
-    stmt = (
-        session.query(APIKey)
-        .filter(APIKey.hash == hash_api_key(api_key))
-        .first()
-    )
-    api_key_obj = stmt[0] if stmt else None
-
-    if not api_key_obj:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    user = await session.get(User, api_key_obj.user_id)
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    return user
-
-
-def hash_api_key(key: str) -> str:
-    import hashlib
-    return hashlib.sha256(key.encode()).hexdigest()
 
 
 def get_allowed_extensions() -> list[str]:
@@ -57,15 +31,11 @@ def get_max_upload_size() -> int:
 @router.post("/files/upload", response_model=dict)
 async def upload_files(
     conversation_id: str | None = Query(None, description="Optional conversation ID to associate files with"),
-    files: list[UploadFile] = File(...),
-    api_key: str = Depends(get_current_user),
+    files: list[UploadFile] = FastAPIFile(...),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> Any:
     """Upload multiple files with validation and persistent storage."""
-    from app.database.models import Conversation
-
-    user = await get_current_user(api_key, session)
-
     # Validate conversation if provided
     conv = None
     if conversation_id:
@@ -80,15 +50,14 @@ async def upload_files(
     uploaded_files = []
 
     for upload_file in files:
-        # Validate file type
-        ext = upload_file.filename.rsplit(".", 1)[-1].lower() if "." in upload_file.filename else ""
+        filename = upload_file.filename or "file"
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext not in allowed_extensions:
             raise HTTPException(
                 status_code=400,
                 detail=f"File type '.{ext}' not allowed. Allowed: {', '.join(allowed_extensions)}",
             )
 
-        # Validate file size
         content = await upload_file.read()
         if len(content) > max_size:
             raise HTTPException(
@@ -96,24 +65,23 @@ async def upload_files(
                 detail=f"File exceeds maximum size of {max_size // (1024 * 1024)}MB",
             )
 
-        # Generate unique storage key
-        file_ext = upload_file.filename.rsplit(".", 1)[-1] if "." in upload_file.filename else ""
-        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        file_ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
+        unique_filename = f"{uuid.uuid4()}.{file_ext}" if file_ext else str(uuid.uuid4())
         storage_key = unique_filename
 
-        # Upload to storage
-        local_temp = f"/tmp/{unique_filename}"
-        with open(local_temp, "wb") as f:
-            f.write(content)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}" if file_ext else "") as tmp:
+            tmp.write(content)
+            local_temp = tmp.name
 
-        result = await storage.upload_file(
-            Path(local_temp), storage_key
-        )
+        try:
+            await storage.upload_file(Path(local_temp), storage_key)
+        finally:
+            if os.path.exists(local_temp):
+                os.remove(local_temp)
 
-        # Save metadata to database
-        file_record = File(
+        file_record = DBFile(
             id=str(uuid.uuid4()),
-            original_name=upload_file.filename,
+            original_name=filename,
             storage_key=storage_key,
             mime_type=upload_file.content_type or "application/octet-stream",
             size=len(content),
@@ -131,10 +99,6 @@ async def upload_files(
             "processing_status": file_record.processing_status,
         })
 
-        # Clean up temp file
-        if os.path.exists(local_temp):
-            os.remove(local_temp)
-
     await session.commit()
 
     return {
@@ -146,41 +110,34 @@ async def upload_files(
 
 @router.get("/files", response_model=dict)
 async def list_files(
-    api_key: str = Query(...),
-    session: AsyncSession = Depends(get_async_session),
     skip: int = 0,
     limit: int = 50,
     file_type: str | None = Query(None, description="Filter by file extension"),
     conversation_id: str | None = Query(None, description="Filter by conversation ID"),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
 ) -> Any:
     """List uploaded files with pagination and filters."""
-    from app.database.models import File
-
-    user = await get_current_user(api_key, session)
-
-    stmt = select(File).where(File.user_id == user.id)
+    stmt = select(DBFile).where(DBFile.user_id == user.id)
 
     if conversation_id:
-        stmt = stmt.where(File.conversation_id == conversation_id)
+        stmt = stmt.where(DBFile.conversation_id == conversation_id)
 
     if file_type:
         ext = file_type.lstrip(".")
-        stmt = stmt.where(File.mime_type.contains(ext) | File.original_name.like(f".{ext}"))
+        stmt = stmt.where(DBFile.mime_type.contains(ext) | DBFile.original_name.like(f"%.{ext}"))
 
-    # Count total
-    from sqlalchemy import func
-    count_stmt = select(func.count()).select_from(select(File).where(File.user_id == user.id).subquery())
+    count_stmt = select(func.count(DBFile.id)).where(DBFile.user_id == user.id)
     if conversation_id:
-        count_stmt = count_stmt.where(File.conversation_id == conversation_id)
+        count_stmt = count_stmt.where(DBFile.conversation_id == conversation_id)
     if file_type:
         ext = file_type.lstrip(".")
-        count_stmt = count_stmt.where(File.mime_type.contains(ext) | File.original_name.like(f".{ext}"))
+        count_stmt = count_stmt.where(DBFile.mime_type.contains(ext) | DBFile.original_name.like(f"%.{ext}"))
 
     count_result = await session.execute(count_stmt)
     total = count_result.scalar_one()
 
-    # Paginate
-    stmt = stmt.offset(skip).limit(limit).order_by(File.created_at.desc())
+    stmt = stmt.offset(skip).limit(limit).order_by(DBFile.created_at.desc())
     result = await session.execute(stmt)
     files = result.scalars().all()
 
@@ -208,15 +165,11 @@ async def list_files(
 @router.get("/files/{file_id}", response_model=dict)
 async def get_file_metadata(
     file_id: str,
-    api_key: str = Query(...),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> Any:
     """Return file metadata."""
-    from app.database.models import File
-
-    user = await get_current_user(api_key, session)
-
-    stmt = select(File).where(File.id == file_id, File.user_id == user.id)
+    stmt = select(DBFile).where(DBFile.id == file_id, DBFile.user_id == user.id)
     result = await session.execute(stmt)
     file_record = result.scalar_one_or_none()
 
@@ -239,25 +192,20 @@ async def get_file_metadata(
 @router.get("/files/{file_id}/download")
 async def download_file(
     file_id: str,
-    api_key: str = Query(...),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> Any:
     """Download the original file."""
-    from app.database.models import File
-
-    user = await get_current_user(api_key, session)
-
-    stmt = select(File).where(File.id == file_id, File.user_id == user.id)
+    stmt = select(DBFile).where(DBFile.id == file_id, DBFile.user_id == user.id)
     result = await session.execute(stmt)
     file_record = result.scalar_one_or_none()
 
     if not file_record:
         raise HTTPException(status_code=404, detail="File not found or access denied")
 
-    # Download from storage to temp location
-    import tempfile
     ext = file_record.storage_key.rsplit(".", 1)[-1] if "." in file_record.storage_key else ""
-    local_temp = tempfile.mktemp(suffix=f".{ext}" if ext else "")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}" if ext else "") as tmp:
+        local_temp = tmp.name
 
     await storage.download_file(file_record.storage_key, Path(local_temp))
 
@@ -271,31 +219,22 @@ async def download_file(
 @router.delete("/files/{file_id}")
 async def delete_file(
     file_id: str,
-    api_key: str = Query(...),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> Any:
     """Delete the file and associated indexed content."""
-    from app.database.models import File, DocumentChunk, ConversationFile
-
-    user = await get_current_user(api_key, session)
-
-    stmt = select(File).where(File.id == file_id, File.user_id == user.id)
+    stmt = select(DBFile).where(DBFile.id == file_id, DBFile.user_id == user.id)
     result = await session.execute(stmt)
     file_record = result.scalar_one_or_none()
 
     if not file_record:
         raise HTTPException(status_code=404, detail="File not found or access denied")
 
-    # Delete from storage
     await storage.delete_file(file_record.storage_key)
 
-    # Delete document chunks
-    from sqlalchemy import delete as sq_delete
     await session.execute(
         sq_delete(DocumentChunk).where(DocumentChunk.file_id == file_id)
     )
-
-    # Delete conversation file links
     await session.execute(
         sq_delete(ConversationFile).where(ConversationFile.file_id == file_id)
     )
@@ -309,15 +248,11 @@ async def delete_file(
 @router.get("/files/{file_id}/status", response_model=dict)
 async def get_file_status(
     file_id: str,
-    api_key: str = Query(...),
+    user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> Any:
     """Return processing and indexing status."""
-    from app.database.models import File
-
-    user = await get_current_user(api_key, session)
-
-    stmt = select(File).where(File.id == file_id, File.user_id == user.id)
+    stmt = select(DBFile).where(DBFile.id == file_id, DBFile.user_id == user.id)
     result = await session.execute(stmt)
     file_record = result.scalar_one_or_none()
 

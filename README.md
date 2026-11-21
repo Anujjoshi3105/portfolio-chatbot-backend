@@ -1,3 +1,13 @@
+---
+title: Portfolio Chatbot Backend
+emoji: 🤖
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_file: app.py
+pinned: false
+---
+
 # Hugging Face Spaces Chatbot Backend
 
 A production-ready, self-hostable chatbot backend deployed on Hugging Face Spaces.

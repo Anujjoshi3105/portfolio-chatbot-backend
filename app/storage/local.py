@@ -2,8 +2,6 @@ import asyncio
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import aiofiles
-
 
 class LocalStorage:
     """

@@ -13,7 +13,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.models import router as models_router
 
 logging.basicConfig(
-    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.WARNING),
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO) if hasattr(settings, "LOG_LEVEL") else logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -65,6 +65,11 @@ async def root() -> dict[str, str]:
     return {
         "name": "HF Spaces Chatbot Backend",
         "version": "0.1.0",
-        "docs": "/api/v1/docs",
-        "redoc": "/api/v1/redoc",
+        "docs": "/docs",
+        "redoc": "/redoc",
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host=settings.HOST, port=settings.PORT, reload=settings.DEBUG)

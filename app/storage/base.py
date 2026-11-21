@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import aiofiles
-
 
 class StorageBackend(ABC):
     """Abstract base class for storage backends."""
